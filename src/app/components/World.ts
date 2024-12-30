@@ -22,7 +22,7 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    drawDistance: 6,
+    drawDistance: 15,
     chunkSize: { width: 64, height: 256 },
     seed: "default",
     fractalNoise: {

@@ -186,10 +186,10 @@ export function spiralGridCoords(
   startRadius: number,
   endRadius: number,
   startCoords: { x: number; z: number }
-): { x: number; y: number; z: number }[] {
+): THREE.Vector3[] {
   const startX = startCoords.x;
   const startZ = startCoords.z;
-  const coords: { x: number; y: number; z: number }[] = [];
+  const coords: THREE.Vector3[] = [];
   const set = new Set<string>();
   let ring = startRadius;
   let direction = 0;
@@ -205,13 +205,12 @@ export function spiralGridCoords(
   while (ring <= endRadius && ring >= startRadius) {
     if (!set.has(keyFromXZCoords(currentX, currentZ))) {
       if (Math.abs(currentX) >= startRadius || Math.abs(currentZ) >= startRadius) {
-        coords.push({ x: currentX + startX, y: 0, z: currentZ + startZ });
+        coords.push(new THREE.Vector3(currentX + startX, 0, currentZ + startZ));
       }
       set.add(keyFromXZCoords(currentX, currentZ));
     }
 
     if (dirCounter >= 3) ring++;
-
     if (Math.abs(currentX + directions[direction].dx) < ring && Math.abs(currentZ + directions[direction].dz) < ring) {
       currentX += directions[direction].dx;
       currentZ += directions[direction].dz;
@@ -226,4 +225,24 @@ export function spiralGridCoords(
     }
   }
   return coords;
+}
+
+
+export function objectDifference(objA: Record<string, any>, objB: Record<string, any>) {
+  // Return the difference objA that is not in objB
+  const diff = { ...objA };
+  for (let k in objB) {
+    delete diff[k];
+  }
+  return diff;
+}
+
+export function objectIntersection(objA: Record<string, any>, objB: Record<string, any>) {
+  const intersection: Record<string, any> = {};
+  for (let k in objB) {
+    if (k in objA) {
+      intersection[k] = objA[k];
+    }
+  }
+  return intersection;
 }
