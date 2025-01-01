@@ -4,15 +4,14 @@ import { World } from "./World";
 import { ChunksManager } from "./ChunksManager";
 import {
   coordsXYZFromKey,
-  getVisibleChunks,
   keyFromXYZCoords,
-  measureTime,
-  objectDifference,
-  spiralGridCoords,
+  setDifference,
+  spiralGridKeys,
   worldToChunkCoords,
 } from "../utils/helpers";
-import { RequestObj, ReturnObj, WorkerQueue } from "../utils/WorkerQueue";
+import { RequestObj, WorkerQueue } from "../utils/WorkerQueue";
 import { ReturnGeometryData } from "../utils/workers/genVoxelData";
+import { QuadTree } from "../utils/QuadTree";
 
 const neighborOffsets = [
   [0, 0, 0], // self
@@ -24,28 +23,6 @@ const neighborOffsets = [
   [0, 0, 1], // front
 ];
 
-const V_SHADER = `
-varying vec3 vNormal;
-varying vec2 vUv;
-
-void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-  vNormal = normal;
-  vUv = uv;
-}
-`;
-
-const F_SHADER = `
-uniform vec3 color;
-varying vec3 vNormal;
-varying vec2 vUv;
-
-void main() {
-  //gl_FragColor = vec4(vNormal, 1.0);
-  gl_FragColor = vec4(color, 1.0);
-}
-`;
-
 interface RequestData extends RequestObj {
   id: string;
   type: string;
@@ -53,23 +30,22 @@ interface RequestData extends RequestObj {
     chunkKey: string;
     params: TerrainGenParams;
     voxelDataBuffer: ArrayBuffer;
+    currentChunk: { x: number; y: number; z: number } | null;
   };
 }
 
 export class TerrainManager extends THREE.Group {
-  asyncLoad = false;
 
+  meshes: Record<string, THREE.Mesh> = {};
+  meshesKeys: Set<string> = new Set();
+  currentChunk: { x: number; y: number; z: number } = { x: -Infinity, y: -Infinity, z: -Infinity };
+  visibleChunksKeys:Set<string> = new Set();
+  
   world: World;
-
   chunksManager: ChunksManager;
   params: TerrainGenParams;
-  meshes: Record<string, THREE.Mesh> = {};
   chunkSize: ChunkSize;
   material: THREE.Material;
-  
-  currentChunk: { x: number; y: number; z: number } | null = null
-  visibleChunks: THREE.Vector3[] | null = null
-
   workerQueue: WorkerQueue<RequestData>;
 
   constructor(world: World) {
@@ -78,22 +54,6 @@ export class TerrainManager extends THREE.Group {
     this.params = world.worldStore.get(["terrain"]);
     this.chunkSize = this.params.chunkSize;
     this.chunksManager = new ChunksManager(world);
-    // this.material = new THREE.MeshLambertMaterial({
-    //   map: texture,
-    //   side: THREE.DoubleSide,
-    //   alphaTest: 0.1,
-    //   transparent: true,
-    // });
-
-    // this.material = new THREE.ShaderMaterial({
-    //   uniforms: {
-    //     color: { value: new THREE.Color("#33551c") },
-    //     texture: { value: null },
-    //   },
-    //   vertexShader: V_SHADER,
-    //   fragmentShader: F_SHADER,
-    // });
-
     this.material = new THREE.MeshLambertMaterial({color: "#33551c"});
 
     const workerParams = {
@@ -108,22 +68,48 @@ export class TerrainManager extends THREE.Group {
     this.workerQueue.update();
     const coords = worldToChunkCoords(playerPosition.x, playerPosition.y, playerPosition.z, this.chunkSize).chunk;
     const curr = this.currentChunk
+    let chunkChangedFlag = false
 
-    if (curr === null || coords.x !== curr.x || coords.z !== curr.z) {
+    if (coords.x !== curr.x || coords.z !== curr.z) {
+      chunkChangedFlag = true
       this.currentChunk = coords;
-      this.visibleChunks = spiralGridCoords(
+      this.visibleChunksKeys = spiralGridKeys(
         0,
         this.params.drawDistance, 
         {x: this.currentChunk.x, z: this.currentChunk.z}
       )
+      
+      const oldMeshesKeys = setDifference(this.meshesKeys, this.visibleChunksKeys)
+      const oldQueueKeys = setDifference(this.workerQueue.getQueueIds(), this.visibleChunksKeys)
+      this.removeUnusedMeshes(oldMeshesKeys);
+      this.removeQueuedMeshes(oldQueueKeys);
+
+      // const min = this.params.chunkSize.width * 1000 * -1
+      // const max = this.params.chunkSize.width * 1000;
+      // const qParams = {
+      //   min: new THREE.Vector2(min, min),
+      //   max: new THREE.Vector2(max, max),
+      //   chunkWidth: this.chunkSize.width,
+      //   drawDistance: this.params.drawDistance
+      // }
+      // const q = new QuadTree(qParams);
+      // q.Insert({x: playerPosition.x, z: playerPosition.z})
+      // const children = q.GetChildren()
+      // const newTerrainChunks = {}
+      // const center = new THREE.Vector2()
+      // const dimensions = new THREE.Vector2()
+      // const index = 3
+      // for (let i = 0; i < children.length; i++) {
+      //   const xmin = children[i].bounds.min.x > children[i].bounds.max.x ? children[i].bounds.min.x : children[i].bounds.max.x
+      //   const ymin = children[i].bounds.min.y > children[i].bounds.max.y ? children[i].bounds.min.y : children[i].bounds.max.y
+      //   console.log(xmin, ymin)
+      // }
     }
 
-    const chunksToRender = Object.keys(this.chunksManager.chunks).filter(x => !Object.keys(this.meshes).includes(x));
-    this.generateNewMeshes(chunksToRender);
+    this.chunksManager.update(this.visibleChunksKeys, chunkChangedFlag);
 
-    if (!this.visibleChunks) return
-    this.chunksManager.update(this.visibleChunks);
-    // this.removeUnusedMeshes(this.visibleChunks);
+    const newMeshesKeys = setDifference(this.chunksManager.chunksKeys, this.meshesKeys)
+    this.generateNewMeshes(newMeshesKeys);
   }
 
   handleWorkerMessage(obj: ReturnGeometryData) {
@@ -135,11 +121,11 @@ export class TerrainManager extends THREE.Group {
         uvsBuffer,
         indicesBuffer
     );
-}
+  }
 
-  generateNewMeshes(chunksToRender: string[]) {
-    if (!chunksToRender) return
-    for (const key of chunksToRender) {
+  generateNewMeshes(newMeshesKeys: Set<string>) {
+    if (newMeshesKeys.size === 0) return
+    for (const key of newMeshesKeys) {
       if (this.meshes[key]) continue;
       this.generateMesh(key);
     }
@@ -154,46 +140,45 @@ export class TerrainManager extends THREE.Group {
         chunkKey: chunkKey,
         params: this.params,
         voxelDataBuffer: this.chunksManager.chunks[chunkKey].buffer,
+        currentChunk: this.currentChunk
       },
     };
     this.workerQueue.addRequest(requestData);
   }
 
-  removeUnusedMeshes(
-    visibleChunks: THREE.Vector3[] | null
-  ) {
-    
-    if (!visibleChunks) return;
-    const queues = [
-      ...this.workerQueue.getQueueIds(),
-      ...Object.keys(this.meshes),
-      ...Object.keys(this.chunksManager.chunks),
-      ...Object.keys(this.chunksManager.workerQueue.getQueueIds())
-    ];
-    const unusedChunks = queues.filter((key) => !visibleChunks.some(
-        (chunk) => key === keyFromXYZCoords(chunk.x, chunk.y, chunk.z)
-      )
-    );
-
-    for (const key of unusedChunks) {
-      delete this.chunksManager.chunks[key];
-      this.chunksManager.workerQueue.removeRequest(key);
-      this.workerQueue.removeRequest(key);
-      const mesh = this.meshes[key];
-      if (mesh) {
-        mesh.geometry.dispose();
-        if (mesh.material instanceof Array) {
-          mesh.material.forEach((material) => {
-            material.dispose();
-          });
-        } else {
-          mesh.material.dispose();
-        }
-        this.remove(mesh);
-        delete this.meshes[key];
-      }
+  removeUnusedMeshes(oldMeshesKeys: Set<string>) {
+    if (oldMeshesKeys.size === 0) return
+    for (const key of oldMeshesKeys) {
+      if (!this.meshes[key]) continue;
+      this.disposeMesh(key);
     }
   }
+
+  removeQueuedMeshes(oldQueueKeys: Set<string>) {
+    if (oldQueueKeys.size === 0) return
+    for (const key of oldQueueKeys) {
+      if (this.meshes[key]) continue;
+      this.workerQueue.removeRequest(key);
+    }
+  }
+
+  disposeMesh(meshKey: string): void {
+    const mesh = this.meshes[meshKey];
+    if (mesh) {
+      mesh.geometry.dispose();
+      if (mesh.material instanceof Array) {
+        mesh.material.forEach((material) => {
+          material.dispose();
+        });
+      } else {
+        mesh.material.dispose();
+      }
+      this.remove(mesh);
+      delete this.meshes[meshKey];
+      this.meshesKeys.delete(meshKey);
+    }
+  }
+
 
   getVoxel(x: number, y: number, z: number) {
     return this.chunksManager.getVoxel(x, y, z);
@@ -265,6 +250,7 @@ export class TerrainManager extends THREE.Group {
       mesh = new THREE.Mesh(geometry, material);
       mesh.name = chunkKey;
       this.meshes[chunkKey] = mesh;
+      this.meshesKeys.add(chunkKey);
       mesh.position.set(
         chunkX * this.chunkSize.width - 0.5,
         -0.5,

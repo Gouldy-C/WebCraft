@@ -65,12 +65,13 @@ export class MainScene extends THREE.Scene {
 
   private addEventListeners() {
     window.addEventListener("resize", () => {
-      this.world.orbitCamera.aspect = window.innerWidth / window.innerHeight;
-      this.world.orbitCamera.updateProjectionMatrix();
-      // this.world.player.camera.aspect = window.innerWidth / window.innerHeight;
-      // this.world.player.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.setPixelRatio(window.devicePixelRatio);
+      this.world.orbitCamera.aspect = window.innerWidth / window.innerHeight;
+      this.world.orbitCamera.updateProjectionMatrix();
+      this.world.controls.update()
+      // this.world.player.camera.aspect = window.innerWidth / window.innerHeight;
+      // this.world.player.camera.updateProjectionMatrix();
     });
   }
 }

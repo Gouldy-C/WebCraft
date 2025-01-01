@@ -1,9 +1,8 @@
 import { InputManager } from "./../utils/InputManger";
 import * as THREE from "three";
-import { Player } from "./unused/Player";
 import { DataStore } from "../utils/DataStore";
-import { Time, TimeObject } from "./unused/Time";
-import { Terrain, TerrainGenParams } from "./unused/Terrain";
+import { TimeObject } from "./unused/Time";
+import { TerrainGenParams } from "./unused/Terrain";
 import { MainScene } from "../pages/MainScene";
 // import { Lighting } from "./Lighting";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -25,8 +24,10 @@ export const defaultWorldStore: WorldStore = {
     drawDistance: 15,
     chunkSize: { width: 64, height: 256 },
     seed: "default",
+    lodDistance: 5,
+    lod: 2,
     fractalNoise: {
-      maxHeight: 0.3,
+      amplitude: 0.25,
       frequency: 0.002,
       octaves: 4,
       lacunarity: 2.0,
@@ -36,13 +37,14 @@ export const defaultWorldStore: WorldStore = {
     trees: {
       trunk: {
         diameter: 1,
-        minHeight: 4,
-        maxHeight: 8,
+        minHeight: 5,
+        maxHeight: 10,
       },
       canopy: {
         minRadius: 3,
         maxRadius: 5,
       },
+      buffer: 3,
       density: 0.008,
     },
   },
@@ -122,7 +124,7 @@ export class World extends THREE.Group {
     this.activeCamera = this.orbitCamera;
     this.add(this.activeCamera);
 
-    this.scene.renderer.setClearColor(0xc4e2ff, 1);
+    this.scene.background = new THREE.Color("rgb(154, 218, 255)");
     this.sun.lookAt(0, 0, 0);
     this.add(this.sun);
     this.add(this.ambientLight);
@@ -150,7 +152,7 @@ export class World extends THREE.Group {
     //   }
     //   this.accumulator -= this.timeStep;
     // }
-    // this.pos = this.pos.add(new THREE.Vector3(0.25, 0, 0.25));
+    // this.pos = this.pos.add(new THREE.Vector3(0.0, 0, 0.25));
     this.terrain.update(this.pos);
     // this.lighting.update(this.player.position);
 

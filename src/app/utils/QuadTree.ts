@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 
-const _MIN_NODE_SIZE = 500;
-
 interface Node {
   bounds: THREE.Box2;
   children: Node[];
@@ -12,12 +10,16 @@ interface Node {
 interface Params {
   min: THREE.Vector2;
   max: THREE.Vector2;
+  chunkWidth: number;
+  drawDistance: number;
 }
 
 export class QuadTree {
   _root: Node;
+  minNodeSize: number;
 
   constructor(params: Params) {
+    this.minNodeSize = params.chunkWidth;
     const b = new THREE.Box2(params.min, params.max);
     this._root = {
       bounds: b,
@@ -51,7 +53,7 @@ export class QuadTree {
   _Insert(child: Node, pos: THREE.Vector2) {
     const distToChild = this._DistanceToChild(child, pos);
 
-    if (distToChild < child.size.x && child.size.x > _MIN_NODE_SIZE) {
+    if (distToChild < child.size.x && child.size.x > this.minNodeSize) {
       child.children = this._CreateChildren(child);
 
       for (let c of child.children) {

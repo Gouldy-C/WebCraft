@@ -204,8 +204,10 @@ export const blockIDToBlock: Record<number, Block> = Object.values(BLOCKS).reduc
   return acc;
 }, {} as Record<number, Block>);
 
+
+// highest priority first 
 export const RESOURCES: Resource[] = [
-  BLOCKS.stone as Resource,
-  BLOCKS.coal_ore as Resource,
   BLOCKS.iron_ore as Resource,
+  BLOCKS.coal_ore as Resource,
+  BLOCKS.stone as Resource,
 ]

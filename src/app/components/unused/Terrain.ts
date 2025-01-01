@@ -21,7 +21,9 @@ export interface ChunkSize {
 export interface TerrainGenParams {
   drawDistance: number;
   chunkSize: ChunkSize;
-  seed: string | number;
+  seed: string;
+  lodDistance: number;
+  lod: number;
   fractalNoise: FractalNoiseParams;
   trees: {
     trunk: {
@@ -34,6 +36,7 @@ export interface TerrainGenParams {
       maxRadius: number;
     };
     density: number;
+    buffer: number;
   };
 }
 

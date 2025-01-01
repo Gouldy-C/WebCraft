@@ -1,7 +1,6 @@
-import { Vector2 } from "three";
 import { ChunkSize, TerrainGenParams } from "../components/unused/Terrain";
 import { FractalNoise } from "./FractalNoise";
-import * as THREE from "three";
+import alea from "alea";
 
 export function measureTime<T>(fn: () => T, label: string = "Function"): T {
   const start = performance.now();
@@ -19,6 +18,16 @@ export function measureTime<T>(fn: () => T, label: string = "Function"): T {
   }
 }
 
+
+// RNG
+
+export function RNG(seed: string) {
+  return alea(seed);
+}
+
+
+// Basic Utils
+
 export function getDirections(num: number) {
   return [
     { dx: num, dy: 0, dz: 0 },
@@ -27,12 +36,11 @@ export function getDirections(num: number) {
     { dx: 0, dy: -num, dz: 0 },
     { dx: 0, dy: 0, dz: num },
     { dx: 0, dy: 0, dz: -num },
-    { dx: num, dy: num, dz: 0 },
-    { dx: -num, dy: num, dz: 0 },
-    { dx: 0, dy: num, dz: num },
-    { dx: 0, dy: num, dz: -num },
   ];
 }
+
+
+// Indexing in a Chunk
 
 export function indexFromXYZCoords(
   x: number,
@@ -60,6 +68,9 @@ export function coordsFromIndex(
   return { x, y, z };
 }
 
+
+// Getting Keys/ Ids and parsing Keys/ Ids
+
 export function keyFromXZCoords(x: number, z: number): string {
   return `${x},${z}`;
 }
@@ -68,41 +79,45 @@ export function keyFromXYZCoords(x: number, y: number, z: number): string {
   return `${x},${y},${z}`;
 }
 
-export function coordsXYZFromKey(key: string): {
-  x: number;
-  y: number;
-  z: number;
-} {
-  const [x, y, z] = key.split(",").map(Number);
-  return { x, y, z };
+export function coordsXYZFromKey(key: string): {x: number; y: number; z: number } {
+  const [x, y, z] = key.split(",")
+  return { x: +x, y: +y, z: +z };
 }
 
 export function coordsXZFromKey(key: string): { x: number; z: number } {
-  const [x, z] = key.split(",").map(Number);
-  return { x, z };
+  const [x, z] = key.split(",")
+  return { x: +x, z: +z };
 }
 
-export function getHeightOfBlock(
-  chunkX: number,
-  chunkZ: number,
-  blockX: number,
-  blockZ: number,
-  params: TerrainGenParams
-): number {
+export function chunkKeyWithResolution(x: number, y: number, z: number, resolution: number): string {
+  return keyFromXYZCoords(x, y, z) + "," + resolution.toString();
+}
+
+export function chunkCoordsWithResolutionFromKey(key: string): { x: number; y: number; z: number; resolution: number } {
+  const [x, y, z, resolution] = key.split(",")
+  return { x: +x, y: +y, z: +z, resolution: +resolution };
+}
+
+export function generateUniquePlayerID() {
+  return `player_${crypto.randomUUID()}`;
+}
+
+
+// Voxel Utils
+
+export function getHeightOfBlock(x: number, z: number, params: TerrainGenParams): number {
   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
-  const value = fractalNoise.fractal2D(
-    chunkX * params.chunkSize.width + blockX,
-    chunkZ * params.chunkSize.width + blockZ
-  );
-  const offset = params.fractalNoise.offset;
-  const scaledNoise = value + offset;
+  const value = fractalNoise.fractal2D(x, z);
   const adjustedHeight = Math.min(
-    Math.floor(params.chunkSize.height * scaledNoise),
+    Math.floor(params.chunkSize.height * value),
     params.chunkSize.height - 1
   );
   const height = Math.max(0, adjustedHeight);
   return height;
 }
+
+
+// Coordinates Conversions
 
 export function worldToChunkCoords(
   x: number,
@@ -129,9 +144,11 @@ export function worldToChunkCoords(
   return { chunk: chunkCoords, voxel: voxelCoords };
 }
 
-export function generateUniquePlayerID() {
-  return `player_${crypto.randomUUID()}`;
-}
+
+
+
+
+
 
 export const SecureStorage = {
   setItem: (key: string, value: any) => {
@@ -153,43 +170,15 @@ export const SecureStorage = {
   },
 };
 
-export function getVisibleChunks(
-  pos: { x: number; y: number; z: number },
-  chunkSize: ChunkSize,
-  drawDistance: number
-) {
-  const visibleChunks = [];
-  const coords = worldToChunkCoords(pos.x, pos.y, pos.z, chunkSize);
 
-  for (
-    let x = coords.chunk.x - drawDistance;
-    x <= coords.chunk.x + drawDistance;
-    x++
-  ) {
-    for (
-      let z = coords.chunk.z - drawDistance;
-      z <= coords.chunk.z + drawDistance;
-      z++
-    ) {
-      const dx = x - coords.chunk.x;
-      const dz = z - coords.chunk.z;
-      if (dx * dx + dz * dz <= drawDistance * drawDistance) {
-        visibleChunks.push({ x, y: coords.chunk.y, z });
-      }
-    }
-  }
-
-  return visibleChunks;
-}
-
-export function spiralGridCoords(
+export function spiralGridKeys(
   startRadius: number,
   endRadius: number,
   startCoords: { x: number; z: number }
-): THREE.Vector3[] {
+) {
   const startX = startCoords.x;
   const startZ = startCoords.z;
-  const coords: THREE.Vector3[] = [];
+  const keys: Set<string> = new Set();
   const set = new Set<string>();
   let ring = startRadius;
   let direction = 0;
@@ -204,8 +193,10 @@ export function spiralGridCoords(
   let currentZ = 0;
   while (ring <= endRadius && ring >= startRadius) {
     if (!set.has(keyFromXZCoords(currentX, currentZ))) {
-      if (Math.abs(currentX) >= startRadius || Math.abs(currentZ) >= startRadius) {
-        coords.push(new THREE.Vector3(currentX + startX, 0, currentZ + startZ));
+      const startRadiusBool = Math.abs(currentX) >= startRadius || Math.abs(currentZ) >= startRadius;
+      const circular = currentZ * currentZ + currentX * currentX <= endRadius* endRadius;
+      if (startRadiusBool && circular) {
+        keys.add(keyFromXYZCoords(currentX + startX, 0, currentZ + startZ));
       }
       set.add(keyFromXZCoords(currentX, currentZ));
     }
@@ -224,25 +215,78 @@ export function spiralGridCoords(
       dirCounter++;
     }
   }
-  return coords;
+  return keys;
 }
 
+// Object Utils
 
 export function objectDifference(objA: Record<string, any>, objB: Record<string, any>) {
   // Return the difference objA that is not in objB
-  const diff = { ...objA };
+  const _difference: Record<string, any> = { ...objA };
   for (let k in objB) {
-    delete diff[k];
+    delete _difference[k];
   }
-  return diff;
+  return _difference;
 }
 
 export function objectIntersection(objA: Record<string, any>, objB: Record<string, any>) {
-  const intersection: Record<string, any> = {};
+  const _intersection: Record<string, any> = {};
   for (let k in objB) {
     if (k in objA) {
-      intersection[k] = objA[k];
+      _intersection[k] = objA[k];
     }
   }
-  return intersection;
+  return _intersection;
 }
+
+
+// Set Utils
+
+export function setDifference<T>(setA: Set<T>, setB: Set<T>): Set<T> {
+  const _difference = new Set<T>(setA);
+  for (const elem of setB) {
+      _difference.delete(elem);
+  }
+  return _difference;
+}
+
+export function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
+  const _intersection = new Set<T>();
+  for (const elem of setB) {
+      if (setA.has(elem)) {
+          _intersection.add(elem);
+      }
+  }
+  return _intersection;
+}
+
+
+//deprecated
+// export function getVisibleChunks(
+//   pos: { x: number; y: number; z: number },
+//   chunkSize: ChunkSize,
+//   drawDistance: number
+// ) {
+//   const visibleChunks = [];
+//   const coords = worldToChunkCoords(pos.x, pos.y, pos.z, chunkSize);
+
+//   for (
+//     let x = coords.chunk.x - drawDistance;
+//     x <= coords.chunk.x + drawDistance;
+//     x++
+//   ) {
+//     for (
+//       let z = coords.chunk.z - drawDistance;
+//       z <= coords.chunk.z + drawDistance;
+//       z++
+//     ) {
+//       const dx = x - coords.chunk.x;
+//       const dz = z - coords.chunk.z;
+//       if (dx * dx + dz * dz <= drawDistance * drawDistance) {
+//         visibleChunks.push({ x, y: coords.chunk.y, z });
+//       }
+//     }
+//   }
+
+//   return visibleChunks;
+// }
