@@ -1,7 +1,7 @@
-import { BLOCKS, Resource, RESOURCES } from "../utils/BlocksData";
-import { TerrainGenParams } from "../components/unused/Terrain";
+import { BLOCKS, Resource, RESOURCES } from "../BlocksData";
+import { TerrainGenParams } from "../../components/TerrainManager";
 import { FractalNoise } from "./FractalNoise";
-import { keyFromXZCoords, RNG } from "./helpers";
+import { clamp, keyFromXZCoords, RNG } from "../generalUtils";
 import * as SimplexNoise from "simplex-noise";
 
 
@@ -14,26 +14,17 @@ export interface ResourceGenerator {
   scarcity: number;
 }
 
-export class BlockGenXYZ {
+export class VoxelGenXYZ {
   params: TerrainGenParams;
   fractalNoise: FractalNoise
-  resourceGenerators: ResourceGenerator[]
+  resources: ResourceGenerator[]
   previousVoxel: {x: number, y: number, z: number} = {x: -Infinity, y: -Infinity, z: -Infinity};
   previousSurfaceHeight: {surfaceHeight: number, heightValue: number} = {surfaceHeight: -Infinity, heightValue: -Infinity}
 
   constructor(params: TerrainGenParams) {
     this.params = params
     this.fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
-    this.resourceGenerators = RESOURCES.map((resource) => {
-      return {
-        noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
-        resource,
-        scaleX: resource.scale.x,
-        scaleY: resource.scale.y,
-        scaleZ: resource.scale.z,
-        scarcity: resource.scarcity,
-      };
-    });
+    this.resources = this._generateResources(params)
   }
 
   getBlockIdXYZ(x: number, y: number, z: number) {
@@ -42,10 +33,7 @@ export class BlockGenXYZ {
     const terrain = this._getTerrainXYZ(x, y, z, heights)
     if (terrain) return terrain
 
-    const isTree = this.isTreeAtXYZ(x, y, z, this.params, heights)
-    if (isTree) return this.generateTreeXYZ(x, y, z, heights)
-
-    return null
+    return BLOCKS.air.id
   }
 
   getHeightsXYZ(x: number, y: number, z: number) {
@@ -63,7 +51,7 @@ export class BlockGenXYZ {
 
   _getTerrainXYZ(x: number, y: number, z: number, heights?: {surfaceHeight: number, heightValue: number}) {
     const {surfaceHeight, heightValue} = heights || this.getHeightsXYZ(x, y, z)
-    if (y > surfaceHeight) return null
+    if (y > surfaceHeight) return BLOCKS.air.id
 
     const isBedrock = y <= (Math.random() > 0.5 ? 0 : 1)
     const resource = this._getResourceXYZ(x, y, z, heights!)
@@ -74,14 +62,14 @@ export class BlockGenXYZ {
     if (y < surfaceHeight && y > heightValue - (Math.random() * 0.1)) return BLOCKS.dirt.id;
     if (y < surfaceHeight) return BLOCKS.stone.id
 
-    return null
+    return BLOCKS.air.id
   }
 
   _getResourceXYZ(x: number, y: number, z: number, heights: {surfaceHeight: number, heightValue: number}) {
-    if (y > heights.surfaceHeight) return null
+    if (y > heights.surfaceHeight) return BLOCKS.air.id
     
-    for (let i = 0; i < this.resourceGenerators.length; i++) {
-      const resource = this.resourceGenerators[i];
+    for (let i = 0; i < this.resources.length; i++) {
+      const resource = this.resources[i];
       const scaleY = resource.scaleY;
       const scaleZ = resource.scaleZ;
       const scaleX = resource.scaleX;
@@ -97,20 +85,8 @@ export class BlockGenXYZ {
         return resource.resource.id;
       }
     } 
-    return null
+    return BLOCKS.air.id
   }
-
-  _getSurfaceHeightXYZ(x: number, y: number, z: number) {
-    const { height } = this.params.chunkSize;
-    const heightValue = this.fractalNoise.fractal2D(x, z)
-    const upperLimit = Math.min(Math.floor(height * heightValue), height - 1);
-    const surfaceHeight = Math.max(0, upperLimit);
-    return {surfaceHeight, heightValue}
-  }
-
-  // isAirAtXYZ(x: number, y: number, z: number) {
-  //   return false
-  // }
 
   isTreeAtXYZ(
     x: number,
@@ -130,36 +106,6 @@ export class BlockGenXYZ {
     if (rng.fract53() < density) return true;
     return false;
   }
-
-  // isCanopyAtXYZ(x: number, y: number, z: number, params: TerrainGenParams, heights?: {surfaceHeight: number, heightValue: number}) {
-  //   const maxRadius = params.trees.canopy.maxRadius
-  //   const { surfaceHeight } = heights ? heights : this.getHeightsXYZ(x, y, z);
-  //   if (y <= surfaceHeight && y > (surfaceHeight + maxRadius + params.trees.trunk.maxHeight)) return false
-  //   const potentialTrees = []
-  //   for (let dx = -maxRadius; dx <= maxRadius; dx++) {
-  //     for (let dz = -maxRadius; dz <= maxRadius; dz++) {
-  //       if (this.isTreeAtXYZ(x + dx, y, z + dz, params)) {
-  //         potentialTrees.push({x: x + dx, y, z: z + dz})
-  //       }
-  //     }
-  //   }
-  //   if (potentialTrees.length === 0) return false
-  //   for (let i = 0; i < potentialTrees.length; i++) {
-  //     const tree = this.generateTreeXYZ(potentialTrees[i].x, potentialTrees[i].y, potentialTrees[i].z)
-  //     if (tree.canopy.some((coord) => coord.x === x && coord.y === y && coord.z === z)) {
-  //       return true
-  //     }
-  //   }
-  //   return false
-  // }
-
-  // isTrunkAtXYZ(x: number, y: number, z: number, params: TerrainGenParams, heights?: {surfaceHeight: number, heightValue: number}) {
-  //   const { surfaceHeight } = heights ? heights : this.getHeightsXYZ(x, y, z);
-  //   if (y <= surfaceHeight) return false
-  //   if (!this.isTreeAtXYZ(x, y, z, params)) return false
-  //   const tree = this.generateTreeXYZ(x, y, z)
-  //   return tree.trunk.some((coord) => coord.x === x && coord.y === y && coord.z === z)
-  // }
 
   generateTreeXYZ(x: number, y: number, z: number, heights?: {surfaceHeight: number, heightValue: number}) {
     const { surfaceHeight } = heights ? heights : this.getHeightsXYZ(x, y, z)
@@ -189,5 +135,26 @@ export class BlockGenXYZ {
       }
     }
     return canopyCoords
+  }
+
+  _getSurfaceHeightXYZ(x: number, y: number, z: number) {
+    const { height } = this.params.chunkSize;
+    const heightValue = this.fractalNoise.fractal2D(x, z)
+    const flooredHeight = Math.floor(heightValue * height)
+    const surfaceHeight = clamp(flooredHeight, 1, height - 1)
+    return {surfaceHeight, heightValue}
+  }
+
+  _generateResources(params: TerrainGenParams) {
+    return RESOURCES.map((resource) => {
+      return {
+        noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
+        resource,
+        scaleX: resource.scale.x,
+        scaleY: resource.scale.y,
+        scaleZ: resource.scale.z,
+        scarcity: resource.scarcity,
+      };
+    });
   }
 }

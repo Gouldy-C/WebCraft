@@ -1,12 +1,11 @@
-import { InputManager } from "./../utils/InputManger";
+import { InputManager } from "../utils/classes/InputManger";
 import * as THREE from "three";
-import { DataStore } from "../utils/DataStore";
+import { DataStore } from "../utils/classes/DataStore";
 import { TimeObject } from "./unused/Time";
-import { TerrainGenParams } from "./unused/Terrain";
+import { TerrainGenParams, TerrainManager } from "./TerrainManager";
 import { MainScene } from "../pages/MainScene";
 // import { Lighting } from "./Lighting";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { TerrainManager } from "./TerrainManager";
 
 export interface WorldStore {
   objects: { [key: string]: any };
@@ -152,7 +151,7 @@ export class World extends THREE.Group {
     //   }
     //   this.accumulator -= this.timeStep;
     // }
-    // this.pos = this.pos.add(new THREE.Vector3(0.0, 0, 0.25));
+    // this.pos = this.pos.add(new THREE.Vector3(0.25, 0, 0.25));
     this.terrain.update(this.pos);
     // this.lighting.update(this.player.position);
 

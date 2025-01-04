@@ -1,11 +1,11 @@
 import { BLOCKS } from "../BlocksData";
-import { TerrainGenParams } from "../../components/unused/Terrain";
+import { TerrainGenParams } from "../../components/TerrainManager";
 import {
   applyChunkDiffs,
 } from "../chunkGenFunctions";
-import { coordsXYZFromKey, indexFromXYZCoords, measureTime } from "../helpers";
-import { WorkerPostMessage } from "../WorkerQueue";
-import { BlockGenXYZ } from "../BlockGenXYZ";
+import { coordsXYZFromKey, indexFromXYZCoords, measureTime } from "../generalUtils";
+import { WorkerPostMessage } from "../classes/WorkerQueue";
+import { VoxelGenXYZ } from "../classes/VoxelGenXYZ";
 
 
 export interface ReturnVoxelData {
@@ -118,28 +118,30 @@ function processChunkData(message: WorkerPostMessage) {
   const workerId = message.workerId;
   const data = message.request.data as RequestVoxelData;
   const { chunkKey, params, diffs } = data
-  const blockGenXYZ = new BlockGenXYZ(params);
+  const voxelGenXYZ = new VoxelGenXYZ(params);
   const { x: chunkX, z: chunkZ } = coordsXYZFromKey(chunkKey);
   const size = params.chunkSize;
   const { width, height } = size;
-  const voxelData = new Uint16Array(width * height * width).fill(0);
-  const gx = chunkX * width;
-  const gz = chunkZ * width
+  const voxelData = new Uint16Array((width * height * width) + (width * width)).fill(0);
+  const gx = chunkX * (width - 2)
+  const gz = chunkZ * (width - 2)
 
   for (let z = 0; z < width; z++) {
     for (let x = 0; x < width; x++) {
-      for (let y = 0; y < height; y++) {
+      const surfaceHeight = voxelGenXYZ.getHeightsXYZ(x + gx, 0, z + gz).surfaceHeight
+      const heightIndex = x + (z * width) + (width * width * height)
+      voxelData[heightIndex] = surfaceHeight
+      for (let y = surfaceHeight; y >= 0; y--) {
         const i = indexFromXYZCoords(x, y, z, size);
         if (voxelData[i] !== 0) continue
-        const voxels: number | null = blockGenXYZ.getBlockIdXYZ(x + gx, y, z + gz);
+        const voxels: number = voxelGenXYZ.getBlockIdXYZ(x + gx, y, z + gz);
         if (!voxels) continue
         voxelData[i] = voxels;
       }
     }
   }
 
-  // generateTrees(chunkX, chunkZ, params, voxelData)
-  // applyChunkDiffs(chunkX, chunkZ, diffs, voxelData, size)
+  applyChunkDiffs(chunkX, chunkZ, diffs, voxelData, size)
 
   const returnData: WorkerPostMessage = {
     id: message.id,
@@ -159,32 +161,18 @@ function processChunkData(message: WorkerPostMessage) {
 function processGeometryData(message: WorkerPostMessage) {
   const workerId = message.workerId;
   const data = message.request.data as RequestGeometryData;
-  const { chunkKey, params, voxelDataBuffer, currentChunk } = data;
-
-  const blockGenXYZ = new BlockGenXYZ(params);
+  const { chunkKey, params, voxelDataBuffer } = data;
   const { width, height } = params.chunkSize;
-  const { x: chunkX, z: chunkZ } = coordsXYZFromKey(chunkKey);
-  const gx = chunkX * width;
-  const gz = chunkZ * width
-  const distance = Math.max(
-    Math.abs(chunkX - currentChunk.x),
-    Math.abs(chunkZ - currentChunk.z)
-  );
   
-  let LOD = 1;
-  if (distance > params.lodDistance) {
-    LOD = params.lod * Math.floor((distance - params.lodDistance) / 2)
-    LOD = Math.max(LOD, params.lod)
-  }
   const positions = [];
   const normals = [];
   const uvs: number[] = [];
   const indices = [];
   const voxelData = new Uint16Array(voxelDataBuffer);
 
-  for (let z = 0; z < width; z+= LOD) {
-    for (let x = 0; x < width; x+= LOD) {
-      const surfaceHeight = blockGenXYZ.getHeightsXYZ(x + gx, 0, z + gz).surfaceHeight
+  for (let z = 1; z < width - 1; z++) {
+    for (let x = 1; x < width - 1; x++) {
+      const surfaceHeight = voxelData[x + (z * width) + (width * width * height)]
       let y = surfaceHeight
       let downFlag = true
       
@@ -192,74 +180,33 @@ function processGeometryData(message: WorkerPostMessage) {
         let movementFlags = new Set();
         
         const index = indexFromXYZCoords(x, y, z, params.chunkSize);
-        let representativeVoxel = voxelData[index];
-        if (LOD > 1) { 
-          const samples = [];
-          for (let dz = 0; dz <= LOD && (z + dz) < width; dz++) {
-            for (let dx = 0; dx <= LOD && (x + dx) < width; dx++) {
-              const sampleIndex = indexFromXYZCoords(
-                x + dx, 
-                y, 
-                z + dz, 
-                params.chunkSize
-              );
-              samples.push(voxelData[sampleIndex]);
-            }
-          }
-  
-          const nonAirSamples = samples.filter(v => v > BLOCKS.air.id);
-          if (nonAirSamples.length > 0) {
-            const counts = new Map();
-            nonAirSamples.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
-            representativeVoxel = Array.from(counts.entries())
-              .reduce((a, b) => a[1] > b[1] ? a : b)[0];
-          } else {
-            representativeVoxel = BLOCKS.air.id;
-          }
-        }
-
-        if (representativeVoxel !== BLOCKS.air.id) {
-          for (const { dir, corners, uvRow } of VoxelFaces) {
-            let neighborX = x + dir[0] * LOD
+        
+        if (voxelData[index] !== BLOCKS.air.id) {
+          for (const { dir, corners, } of VoxelFaces) {
+            let neighborX = x + dir[0]
             let neighborY = y + dir[1];
-            let neighborZ = z + dir[2] * LOD
-            let neighborHeights
+            let neighborZ = z + dir[2]
           
-            let neighborVoxelId = 0;
+            let neighborVoxelId: number | boolean = false;
             const neighborInChunk = 
               neighborX >= 0 && neighborX < width &&
-            neighborY >= 0 && neighborY < height &&
-            neighborZ >= 0 && neighborZ < width
+              neighborY >= 0 && neighborY < height &&
+              neighborZ >= 0 && neighborZ < width
 
           if (neighborInChunk) {
             const neighborIndex = indexFromXYZCoords(neighborX, neighborY, neighborZ, params.chunkSize);
             neighborVoxelId = voxelData[neighborIndex];
-          } else {
-            neighborHeights = blockGenXYZ.getHeightsXYZ(
-              neighborX + gx, 
-              neighborY, 
-              neighborZ + gz
-            );
-            if (neighborHeights.surfaceHeight - LOD < y) neighborVoxelId = BLOCKS.air.id
-            else {
-              neighborVoxelId = 3
-            } 
           }
-          neighborVoxelId = neighborVoxelId === BLOCKS.oak_log.id ? 0 : neighborVoxelId
 
           if (!neighborVoxelId) {
             const ndx = positions.length / 3;
             for (const pos of corners) {
               positions.push(
-                pos[0] * LOD + x,
+                pos[0] + x,
                 pos[1] + y, 
-                pos[2] * LOD + z
+                pos[2] + z
               );
               normals.push(...dir);
-              // uvs.push(
-              //   ((uvVoxel + uv[0]) * 16) / 16,
-              //   1 - ((uvRow + 1 - uv[1]) * 16) / 16
-              // );
             }
             indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
             movementFlags.add(true)
@@ -276,7 +223,7 @@ function processGeometryData(message: WorkerPostMessage) {
         const index = indexFromXYZCoords(x, y, z, params.chunkSize);
         const voxel = voxelData[index];
         if (voxel !== BLOCKS.air.id) {
-          for (const { dir, corners, uvRow } of VoxelFaces) {
+          for (const { dir, corners } of VoxelFaces) {
             let neighborX = x + dir[0];
             let neighborY = y + dir[1];
             let neighborZ = z + dir[2];
@@ -298,10 +245,6 @@ function processGeometryData(message: WorkerPostMessage) {
                   pos[2] + z
                 );
                 normals.push(...dir);
-                // uvs.push(
-                //   ((uvVoxel + uv[0]) * 16) / 16,
-                //   1 - ((uvRow + 1 - uv[1]) * 16) / 16
-                // );
               }
               indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
             }

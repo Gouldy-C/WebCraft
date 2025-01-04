@@ -1,5 +1,5 @@
-import { ChunkSize, TerrainGenParams } from "../components/unused/Terrain";
-import { FractalNoise } from "./FractalNoise";
+import { ChunkSize, TerrainGenParams } from "../components/TerrainManager";
+import { FractalNoise } from "./classes/FractalNoise";
 import alea from "alea";
 
 export function measureTime<T>(fn: () => T, label: string = "Function"): T {
@@ -70,6 +70,11 @@ export function coordsFromIndex(
 
 
 // Getting Keys/ Ids and parsing Keys/ Ids
+
+export function chunkKeyFromXYZ(x: number, y: number, z: number, chunkSize: ChunkSize) {
+  const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, chunkSize).chunk
+  return `${chunkX},${chunkY},${chunkZ}`;
+}
 
 export function keyFromXZCoords(x: number, z: number): string {
   return `${x},${z}`;
@@ -176,10 +181,7 @@ export function spiralGridKeys(
   endRadius: number,
   startCoords: { x: number; z: number }
 ) {
-  const startX = startCoords.x;
-  const startZ = startCoords.z;
   const keys: Set<string> = new Set();
-  const set = new Set<string>();
   let ring = startRadius;
   let direction = 0;
   let dirCounter = 0;
@@ -192,21 +194,14 @@ export function spiralGridKeys(
   let currentX = 0;
   let currentZ = 0;
   while (ring <= endRadius && ring >= startRadius) {
-    if (!set.has(keyFromXZCoords(currentX, currentZ))) {
-      const startRadiusBool = Math.abs(currentX) >= startRadius || Math.abs(currentZ) >= startRadius;
-      const circular = currentZ * currentZ + currentX * currentX <= endRadius* endRadius;
-      if (startRadiusBool && circular) {
-        keys.add(keyFromXYZCoords(currentX + startX, 0, currentZ + startZ));
-      }
-      set.add(keyFromXZCoords(currentX, currentZ));
-    }
+    keys.add(keyFromXYZCoords(currentX + startCoords.x, 0, currentZ + startCoords.z));
 
     if (dirCounter >= 3) ring++;
     if (Math.abs(currentX + directions[direction].dx) < ring && Math.abs(currentZ + directions[direction].dz) < ring) {
       currentX += directions[direction].dx;
       currentZ += directions[direction].dz;
       dirCounter = 0;
-      if (set.has(keyFromXZCoords(currentX, currentZ))) {
+      if (keys.has(keyFromXYZCoords(currentX + startCoords.x, 0, currentZ + startCoords.z))) {
         ring++;
         direction = 0;
       }
@@ -222,9 +217,10 @@ export function spiralGridKeys(
 
 export function objectDifference(objA: Record<string, any>, objB: Record<string, any>) {
   // Return the difference objA that is not in objB
-  const _difference: Record<string, any> = { ...objA };
-  for (let k in objB) {
-    delete _difference[k];
+  const _difference: Record<string, any> = {};
+  for (let k in objA) {
+    if (k in objB) continue;
+    _difference[k] = objA[k];
   }
   return _difference;
 }
@@ -243,9 +239,10 @@ export function objectIntersection(objA: Record<string, any>, objB: Record<strin
 // Set Utils
 
 export function setDifference<T>(setA: Set<T>, setB: Set<T>): Set<T> {
-  const _difference = new Set<T>(setA);
-  for (const elem of setB) {
-      _difference.delete(elem);
+  const _difference = new Set<T>();
+  for (const elem of setA) {
+      if (setB.has(elem)) continue;
+      _difference.add(elem);
   }
   return _difference;
 }
@@ -260,6 +257,38 @@ export function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
   return _intersection;
 }
 
+
+// Math Utils
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+export function normalize(value: number, min: number, max: number) {
+  return (value - min) / (max - min);
+}
+
+export function randRange(a: number, b: number) {
+  return Math.random() * (b - a) + a;
+}
+
+export function randInt(a: number, b: number) {
+  return Math.round(Math.random() * (b - a) + a);
+}
+
+export function lerp(x: number, a: number, b: number) {
+  return x * (b - a) + a;
+}
+
+export function smoothStep(x: number, a: number, b: number) {
+  x = x * x * (3.0 - 2.0 * x);
+  return x * (b - a) + a;
+}
+
+export function smootherStep(x: number, a: number, b: number) {
+  x = x * x * x * (x * (x * 6 - 15) + 10);
+  return x * (b - a) + a;
+}
 
 //deprecated
 // export function getVisibleChunks(

@@ -1,5 +1,5 @@
 import { blockIDToBlock, BLOCKS } from "../../utils/BlocksData";
-import { InputManager, InputAction } from "../../utils/InputManger";
+import { InputManager, InputAction } from "../../utils/classes/InputManger";
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { World } from "../World";

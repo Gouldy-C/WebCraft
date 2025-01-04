@@ -1,4 +1,4 @@
-import { InputManager } from "../utils/InputManger";
+import { InputManager } from "../utils/classes/InputManger";
 import * as THREE from "three";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 // import { createUi } from "../utils/ui";

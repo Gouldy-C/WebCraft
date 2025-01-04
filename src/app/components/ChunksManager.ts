@@ -1,14 +1,14 @@
-import { ChunkSize, TerrainGenParams } from "./unused/Terrain";
+import { ChunkSize, TerrainGenParams } from "./TerrainManager";
 import { World } from "./World";
 import {
   indexFromXYZCoords,
   keyFromXYZCoords,
   setDifference,
   worldToChunkCoords,
-} from "../utils/helpers";
-import { RequestObj, WorkerQueue } from "../utils/WorkerQueue";
+} from "../utils/generalUtils";
+import { RequestObj, WorkerQueue } from "../utils/classes/WorkerQueue";
 import { ReturnVoxelData } from "../utils/workers/genVoxelData";
-import { BlockGenXYZ } from "../utils/BlockGenXYZ";
+import { VoxelGenXYZ } from "../utils/classes/VoxelGenXYZ";
 
 
 interface RequestData extends RequestObj {
@@ -31,7 +31,7 @@ export class ChunksManager {
 
   workerQueue: WorkerQueue<RequestData>;
 
-  blockGenXYZ: BlockGenXYZ
+  voxelGenXYZ: VoxelGenXYZ
 
   constructor(world: World) {
     this.world = world;
@@ -40,11 +40,11 @@ export class ChunksManager {
     this.chunksKeys = new Set();
     this.chunks = {}
 
-    this.blockGenXYZ = new BlockGenXYZ(this.params);
+    this.voxelGenXYZ = new VoxelGenXYZ(this.params);
 
     const workerParams = {
       url: new URL("../utils/workers/genVoxelData.ts", import.meta.url),
-      numberOfWorkers: 4,
+      numberOfWorkers: 8,
       callback: (obj: ReturnVoxelData) => this._handleWorkerMessage(obj),
     };
     this.workerQueue = new WorkerQueue(workerParams);
@@ -90,11 +90,6 @@ export class ChunksManager {
     const { chunkKey, voxelDataBuffer } = obj
     this.chunksKeys.add(chunkKey);
     this.chunks[chunkKey] = new Uint16Array(voxelDataBuffer);
-  }
-
-  computeChunkId(x: number, y: number, z: number) {
-    const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, this.chunkSize).chunk
-    return `${chunkX},${chunkY},${chunkZ}`;
   }
 
   getChunkForVoxel(x: number, y: number, z: number) {

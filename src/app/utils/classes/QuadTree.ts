@@ -19,7 +19,7 @@ export class QuadTree {
   minNodeSize: number;
 
   constructor(params: Params) {
-    this.minNodeSize = params.chunkWidth;
+    this.minNodeSize = params.chunkWidth * params.drawDistance;
     const b = new THREE.Box2(params.min, params.max);
     this._root = {
       bounds: b,
