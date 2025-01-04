@@ -44,7 +44,7 @@ export class ChunksManager {
 
     const workerParams = {
       url: new URL("../utils/workers/genVoxelData.ts", import.meta.url),
-      numberOfWorkers: 8,
+      numberOfWorkers: window.navigator.hardwareConcurrency,
       callback: (obj: ReturnVoxelData) => this._handleWorkerMessage(obj),
     };
     this.workerQueue = new WorkerQueue(workerParams);

@@ -49,8 +49,8 @@ export function indexFromXYZCoords(
   chunkSize: ChunkSize,
 ): number {
   const voxelX = ((x % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
-  const voxelY = ((y % chunkSize.height) + chunkSize.height) % chunkSize.height | 0;
   const voxelZ = ((z % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
+  const voxelY = ((y % chunkSize.height) + chunkSize.height) % chunkSize.height | 0;
   return (
     voxelY * (chunkSize.width * chunkSize.width) +
     voxelZ * chunkSize.width +

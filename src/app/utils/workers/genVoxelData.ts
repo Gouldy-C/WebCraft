@@ -166,7 +166,7 @@ function processGeometryData(message: WorkerPostMessage) {
   
   const positions = [];
   const normals = [];
-  const uvs: number[] = [];
+  const uvs = [];
   const indices = [];
   const voxelData = new Uint16Array(voxelDataBuffer);
 
@@ -177,9 +177,9 @@ function processGeometryData(message: WorkerPostMessage) {
       let downFlag = true
       
       while (downFlag) {
-        let movementFlags = new Set();
-        
-        const index = indexFromXYZCoords(x, y, z, params.chunkSize);
+        let movementFlags = []
+
+        const index = x + (z * width) + (width * width * y)
         
         if (voxelData[index] !== BLOCKS.air.id) {
           for (const { dir, corners, } of VoxelFaces) {
@@ -194,7 +194,7 @@ function processGeometryData(message: WorkerPostMessage) {
               neighborZ >= 0 && neighborZ < width
 
           if (neighborInChunk) {
-            const neighborIndex = indexFromXYZCoords(neighborX, neighborY, neighborZ, params.chunkSize);
+            const neighborIndex = neighborX + (neighborZ * width) + (width * width * neighborY)
             neighborVoxelId = voxelData[neighborIndex];
           }
 
@@ -209,18 +209,18 @@ function processGeometryData(message: WorkerPostMessage) {
               normals.push(...dir);
             }
             indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
-            movementFlags.add(true)
+            movementFlags.push(true)
           } else {
-            movementFlags.add(false)
+            movementFlags.push(false)
           }
         }
       y = y - 1
-      downFlag = movementFlags.has(true)
+      downFlag = movementFlags.includes(true)
       }
     }
       y = surfaceHeight + 1
       while (y < height) {
-        const index = indexFromXYZCoords(x, y, z, params.chunkSize);
+        const index = x + (z * width) + (width * width * y)
         const voxel = voxelData[index];
         if (voxel !== BLOCKS.air.id) {
           for (const { dir, corners } of VoxelFaces) {
@@ -234,7 +234,7 @@ function processGeometryData(message: WorkerPostMessage) {
             neighborZ >= 0 && neighborZ < width
 
             if (!neighborInChunk) continue
-            const neighborIndex = indexFromXYZCoords(neighborX, neighborY, neighborZ, params.chunkSize);
+            const neighborIndex = neighborX + (neighborZ * width) + (width * width * neighborY)
             const neighborVoxel = voxelData[neighborIndex];
             if (neighborVoxel === BLOCKS.air.id) {
               const ndx = positions.length / 3;

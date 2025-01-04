@@ -77,7 +77,7 @@ export class TerrainManager extends THREE.Group {
 
     const workerParams = {
       url: new URL("../utils/workers/genVoxelData.ts", import.meta.url),
-      numberOfWorkers: 4,
+      numberOfWorkers: window.navigator.hardwareConcurrency,
       callback: (obj: ReturnGeometryData) => this.handleWorkerMessage(obj),
     };
     this.workerQueue = new WorkerQueue(workerParams);
