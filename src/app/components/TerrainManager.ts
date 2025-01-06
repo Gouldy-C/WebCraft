@@ -6,6 +6,7 @@ import {
   coordsXYZFromKey,
   getDirections,
   keyFromXYZCoords,
+  measureTime,
   setDifference,
   spiralGridKeys,
   worldToChunkCoords,
@@ -53,10 +54,11 @@ interface RequestData extends RequestObj {
   };
 }
 
-export class TerrainManager extends THREE.Group {
+export class TerrainManager extends THREE.Object3D {
 
   meshes: Record<string, THREE.Mesh> = {};
   meshesKeys: Set<string> = new Set();
+
   currentChunk: { x: number; y: number; z: number } = { x: -Infinity, y: -Infinity, z: -Infinity };
   visibleChunksKeys:Set<string> = new Set();
   
@@ -221,20 +223,11 @@ export class TerrainManager extends THREE.Group {
       this.params.drawDistance, 
       {x: this.currentChunk.x, z: this.currentChunk.z}
     )
-    const worldSize = this.chunkSize.width * Math.pow(2, this.params.drawDistance);
-    const qParams = {
-      min: new THREE.Vector2(-worldSize, -worldSize),
-      max: new THREE.Vector2(worldSize, worldSize),
-      chunkWidth: this.chunkSize.width,
-      drawDistance: this.params.drawDistance
-    };
-    const q = new QuadTree(qParams);
-    q.Insert(playerPosition);
-    const children = q.GetChildren();
+    // const worldSize = this.chunkSize.width * Math.pow(2, this.params.drawDistance); // for quadtree
     
-    const oldMeshesKeys = setDifference(this.meshesKeys, this.visibleChunksKeys)
     const oldQueueKeys = setDifference(this.workerQueue.getQueueIds(), this.visibleChunksKeys)
     this.removeQueuedMeshes(oldQueueKeys);
+    const oldMeshesKeys = setDifference(this.meshesKeys, this.visibleChunksKeys)
     this.removeUnusedMeshes(oldMeshesKeys);
   }
 

@@ -26,7 +26,7 @@ export const defaultWorldStore: WorldStore = {
     lodDistance: 5,
     lod: 2,
     fractalNoise: {
-      amplitude: 0.25,
+      amplitude: 0.35,
       frequency: 0.002,
       octaves: 4,
       lacunarity: 2.0,
@@ -151,7 +151,7 @@ export class World extends THREE.Group {
     //   }
     //   this.accumulator -= this.timeStep;
     // }
-    this.pos = this.pos.add(new THREE.Vector3(0.25, 0, 0.25));
+    // this.pos = this.pos.add(new THREE.Vector3(0.25, 0, 0.25));
     this.terrain.update(this.pos);
     // this.lighting.update(this.player.position);
 

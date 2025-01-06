@@ -106,14 +106,31 @@ const VoxelFaces = [
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "generateChunkVoxelData") {
-    measureTime(() => processChunkData(e.data), "processChunk");
+    measureTime(() => getVoxelTypes(e.data), "processChunk");
   }
   if (e.data.request.type === "generateChunkMesh") {
     measureTime(() => processGeometryData(e.data), "processGeometry");
   }
-};
+}
 
-function processChunkData(message: WorkerPostMessage) {
+function getBinaryVoxelData(message: WorkerPostMessage) {
+  const workerId = message.workerId;
+  const data = message.request.data as RequestVoxelData;
+  const { chunkKey, params, diffs } = data
+  const { width, height } = params.chunkSize;
+
+  const binaryVoxelData = new BigUint64Array((width * height)).fill(BigInt(0));
+  const heightMapData = new Uint8Array((width * width)).fill(0);
+
+  for (let z = 0; z < width; z++) {
+    for (let y = 0; y < height; y++) {
+      
+    }
+  }
+
+}
+
+function getVoxelTypes(message: WorkerPostMessage) {
 
   const workerId = message.workerId;
   const data = message.request.data as RequestVoxelData;
@@ -166,7 +183,7 @@ function processGeometryData(message: WorkerPostMessage) {
   
   const positions = [];
   const normals = [];
-  const uvs = [];
+  // const uvs = [];
   const indices = [];
   const voxelData = new Uint16Array(voxelDataBuffer);
 
@@ -257,7 +274,7 @@ function processGeometryData(message: WorkerPostMessage) {
 
   const positionsBuffer = new Float32Array(positions);
   const normalsBuffer = new Int8Array(normals);
-  const uvsBuffer = new Int16Array(uvs);
+  // const uvsBuffer = new Int16Array(uvs);
   const indicesBuffer = new Uint32Array(indices);
 
   const returnData: WorkerPostMessage = {
@@ -268,7 +285,7 @@ function processGeometryData(message: WorkerPostMessage) {
         chunkKey,
         positionsBuffer: positionsBuffer.buffer,
         normalsBuffer: normalsBuffer.buffer,
-        uvsBuffer: uvsBuffer.buffer,
+        // uvsBuffer: uvsBuffer.buffer,
         indicesBuffer: indicesBuffer.buffer
       }
     }
@@ -277,7 +294,7 @@ function processGeometryData(message: WorkerPostMessage) {
   self.postMessage(returnData, [
     positionsBuffer.buffer, 
     normalsBuffer.buffer, 
-    uvsBuffer.buffer, 
+    // uvsBuffer.buffer, 
     indicesBuffer.buffer
   ]);
 }

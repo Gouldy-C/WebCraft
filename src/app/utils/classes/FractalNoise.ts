@@ -54,7 +54,6 @@ export class FractalNoise {
       freq *= this.lacunarity;
     }
     total = total / maxValue;
-    total = clamp(total + this.offset, 0, 1);
     return total;
   }
 
@@ -72,7 +71,6 @@ export class FractalNoise {
     }
     
     total = total / maxValue;
-    total = clamp(total + this.offset, 0, 1);
     return total;
   }
 }

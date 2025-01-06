@@ -39,6 +39,24 @@ npm run dev
 
 4. Open your browser and navigate to `http://localhost:5173`
 
+## 🧰 Scope
+
+WebCraft aspires to be a unique blend of features inspired by Minecraft, Terraria, and Path of Exile, delivering a rich and immersive gaming experience:
+
+- **Exploration and Voxel World** (Minecraft-inspired):
+  - Explore an expansive, procedurally generated voxel-based world with diverse biomes and dynamic weather systems.
+  - Build and customize your world block by block with complete creative freedom.
+
+- **Mining and Self-Upgrade** (Terraria-inspired):
+  - Mine resources to craft tools, weapons, and armor.
+  - Progress through a tiered system of upgrades that unlock new abilities and exploration opportunities.
+  - Unearth rare materials and artifacts in challenging underground environments.
+
+- **Intense Boss Fights and Character Progression** (Path of Exile-inspired):
+  - Face powerful bosses with unique mechanics and combat challenges.
+  - Develop your character with intricate stat systems, skill trees, and item customization.
+  - Participate in seasonal content (Leagues) with unique challenges, rewards, and mechanics to keep the game fresh and exciting.
+
 ## 🛠️ Tech Stack
 
 - **TypeScript**: Type-safe programming
@@ -47,7 +65,7 @@ npm run dev
 - **Web Workers**: Parallel processing for chunk generation
 - **Simplex Noise**: Procedural terrain generation
 
-## 🏗️ Project Structure
+## 🗰 Project Structure
 
 ```
 src/
@@ -103,7 +121,7 @@ npm run preview
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
+## 🖍️ License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
@@ -111,4 +129,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Three.js community for the excellent 3D graphics library
 - Minecraft for the inspiration
+- Terraria and Path of Exile for gameplay mechanics inspiration
 - Contributors and maintainers of the dependencies used in this project
+

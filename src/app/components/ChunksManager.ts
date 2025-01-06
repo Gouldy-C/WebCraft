@@ -53,12 +53,13 @@ export class ChunksManager {
   update(visibleChunksKeys: Set<string>, chunkChangedFlag: boolean) {
     this.workerQueue.update()
     if (chunkChangedFlag) {
-      const oldChunksKeys = setDifference(this.chunksKeys, visibleChunksKeys)
-      this._removeUnusedChunks(oldChunksKeys);
-
+      
       const oldQueueKeys = setDifference(this.workerQueue.getQueueIds(), visibleChunksKeys)
       this._removeQueuedChunks(oldQueueKeys);
-
+      
+      const oldChunksKeys = setDifference(this.chunksKeys, visibleChunksKeys)
+      this._removeUnusedChunks(oldChunksKeys);
+      
       const newChunksKeys = setDifference(visibleChunksKeys, this.chunksKeys)
       this._generateNewChunks(newChunksKeys);
     }

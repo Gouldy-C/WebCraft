@@ -93,20 +93,8 @@ export const BLOCKS: Record<string, Block> = {
       back: 'sand',
     },
   },
-  cobblestone: {
-    id: 6,
-    name: 'cobblestone',
-    textures: {
-      top: 'cobblestone',
-      bottom: 'cobblestone',
-      left: 'cobblestone',
-      right: 'cobblestone',
-      front: 'cobblestone',
-      back: 'cobblestone',
-    }
-  },
   stone: {
-    id: 7,
+    id: 6,
     name: 'stone',
     textures: {
       top: 'stone',
@@ -119,8 +107,32 @@ export const BLOCKS: Record<string, Block> = {
     scale: { x: 30, y: 30, z: 30 },
     scarcity: 0.8,
   },
-  coal_ore: {
+  water: {
+    id: 7,
+    name: 'water',
+    textures: {
+      top: 'water',
+      bottom: 'water',
+      left: 'water',
+      right: 'water',
+      front: 'water',
+      back: 'water',
+    },
+  },
+  cobblestone: {
     id: 8,
+    name: 'cobblestone',
+    textures: {
+      top: 'cobblestone',
+      bottom: 'cobblestone',
+      left: 'cobblestone',
+      right: 'cobblestone',
+      front: 'cobblestone',
+      back: 'cobblestone',
+    }
+  },
+  coal_ore: {
+    id: 9,
     name: 'coalOre',
     textures: {
       top: 'coal_ore',
@@ -134,7 +146,7 @@ export const BLOCKS: Record<string, Block> = {
     scarcity: 0.8,
   },
   iron_ore: {
-    id: 9,
+    id: 10,
     name: 'ironOre',
     textures: {
       top: 'iron_ore',
@@ -148,7 +160,7 @@ export const BLOCKS: Record<string, Block> = {
     scarcity: 0.9,
   },
   snow_dirt: {
-    id: 10,
+    id: 11,
     name: 'snow_dirt',
     textures: {
       top: 'snow',
@@ -160,7 +172,7 @@ export const BLOCKS: Record<string, Block> = {
     },
   },
   snow: {
-    id: 11,
+    id: 12,
     name: 'snow',
     textures: {
       top: 'snow',
@@ -172,7 +184,7 @@ export const BLOCKS: Record<string, Block> = {
     },
   },
   oak_log: {
-    id: 12,
+    id: 13,
     name: 'oak_log',
     textures: {
       top: 'log_oak_top',
@@ -184,7 +196,7 @@ export const BLOCKS: Record<string, Block> = {
     }
   },
   oak_leaves: {
-    id: 13,
+    id: 14,
     name: 'oak_leaves',
     textures: {
       top: 'oak_leaves',
