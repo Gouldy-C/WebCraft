@@ -1,4 +1,4 @@
-class BitArray {
+export class BitArray {
   private size: number;
   private array: Uint32Array;
 
