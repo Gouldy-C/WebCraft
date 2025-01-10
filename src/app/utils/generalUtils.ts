@@ -1,4 +1,4 @@
-import { ChunkSize, TerrainGenParams } from "../components/TerrainManager";
+import { TerrainGenParams } from "../components/TerrainManager";
 import { FractalNoise } from "./classes/FractalNoise";
 import alea from "alea";
 
@@ -20,7 +20,6 @@ export function measureTime<T>(fn: () => T, label: string = "Function"): T {
 
 
 // RNG
-
 export function RNG(seed: string) {
   return alea(seed);
 }
@@ -46,32 +45,32 @@ export function indexFromXYZCoords(
   x: number,
   y: number,
   z: number,
-  chunkSize: ChunkSize,
+  chunkSize: number,
 ): number {
-  const voxelX = ((x % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
-  const voxelZ = ((z % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
-  const voxelY = ((y % chunkSize.height) + chunkSize.height) % chunkSize.height | 0;
+  const voxelX = ((x % chunkSize) + chunkSize) % chunkSize | 0;
+  const voxelZ = ((z % chunkSize) + chunkSize) % chunkSize | 0;
+  const voxelY = ((y % chunkSize) + chunkSize) % chunkSize | 0;
   return (
-    voxelY * (chunkSize.width * chunkSize.width) +
-    voxelZ * chunkSize.width +
+    voxelY * (chunkSize * chunkSize) +
+    voxelZ * chunkSize +
     voxelX
   );
 }
 
 export function coordsFromIndex(
   index: number,
-  chunkSize: ChunkSize,
+  chunkSize: number,
 ): { x: number; y: number; z: number } {
-  const x = index % chunkSize.width;
-  const z = Math.floor(index / chunkSize.width) % chunkSize.width;
-  const y = Math.floor(index / (chunkSize.width * chunkSize.width)) % chunkSize.height;
+  const x = index % chunkSize;
+  const z = Math.floor(index / chunkSize) % chunkSize;
+  const y = Math.floor(index / (chunkSize * chunkSize)) % chunkSize;
   return { x, y, z };
 }
 
 
 // Getting Keys/ Ids and parsing Keys/ Ids
 
-export function chunkKeyFromXYZ(x: number, y: number, z: number, chunkSize: ChunkSize) {
+export function chunkKeyFromXYZ(x: number, y: number, z: number, chunkSize: number): string {
   const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, chunkSize).chunk
   return `${chunkX},${chunkY},${chunkZ}`;
 }
@@ -109,17 +108,16 @@ export function generateUniquePlayerID() {
 
 
 // Voxel Utils
-
-export function getHeightOfBlock(x: number, z: number, params: TerrainGenParams): number {
-  const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
-  const value = fractalNoise.fractal2D(x, z);
-  const adjustedHeight = Math.min(
-    Math.floor(params.chunkSize.height * value),
-    params.chunkSize.height - 1
-  );
-  const height = Math.max(0, adjustedHeight);
-  return height;
-}
+// export function getHeightOfBlock(x: number, z: number, params: TerrainGenParams): number {
+//   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
+//   const value = fractalNoise.fractal2D(x, z);
+//   const adjustedHeight = Math.min(
+//     Math.floor(params.chunkSize * value),
+//     params.chunkSize - 1
+//   );
+//   const height = Math.max(0, adjustedHeight);
+//   return height;
+// }
 
 
 // Coordinates Conversions
@@ -128,19 +126,19 @@ export function worldToChunkCoords(
   x: number,
   y: number,
   z: number,
-  chunkSize: { width: number; height: number }
+  chunkSize: number
 ): {
   chunk: { x: number; y: number; z: number };
   voxel: { x: number; y: number; z: number };
 } {
   const chunkCoords = {
-    x: Math.floor(x / chunkSize.width),
-    y: Math.floor(y / chunkSize.height),
-    z: Math.floor(z / chunkSize.width),
+    x: Math.floor(x / chunkSize),
+    y: Math.floor(y / chunkSize),
+    z: Math.floor(z / chunkSize),
   };
-  const voxelX = ((x % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
-  const voxelY = ((y % chunkSize.height) + chunkSize.height) % chunkSize.height | 0;
-  const voxelZ = ((z % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
+  const voxelX = ((x % chunkSize) + chunkSize) % chunkSize | 0;
+  const voxelY = ((y % chunkSize) + chunkSize) % chunkSize | 0;
+  const voxelZ = ((z % chunkSize) + chunkSize) % chunkSize | 0;
   const voxelCoords = {
     x: voxelX,
     y: voxelY,
@@ -257,62 +255,32 @@ export function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
 
 // Math Utils
 
-export function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
+export function clamp(value: number, lowerBound: number, upperBound: number) {
+  return Math.min(Math.max(value, lowerBound), upperBound);
 }
 
-export function normalize(value: number, min: number, max: number) {
-  return (value - min) / (max - min);
+export function normalize(currentValue: number, minValue: number, maxValue: number) {
+  return (currentValue - minValue) / (maxValue - minValue);
 }
 
-export function randRange(a: number, b: number) {
-  return Math.random() * (b - a) + a;
+export function randRange(minValue: number, maxValue: number) {
+  return Math.random() * (maxValue - minValue) + minValue;
 }
 
-export function randInt(a: number, b: number) {
-  return Math.round(Math.random() * (b - a) + a);
+export function randInt(minValue: number, maxValue: number) {
+  return Math.round(Math.random() * (maxValue - minValue) + minValue);
 }
 
-export function lerp(x: number, a: number, b: number) {
-  return x * (b - a) + a;
+export function lerp(t: number, start: number, end: number) {
+  return t * (end - start) + start;
 }
 
-export function smoothStep(x: number, a: number, b: number) {
-  x = x * x * (3.0 - 2.0 * x);
-  return x * (b - a) + a;
+export function smoothStep(t: number, start: number, end: number) {
+  t = t * t * (3.0 - 2.0 * t);
+  return t * (end - start) + start;
 }
 
-export function smootherStep(x: number, a: number, b: number) {
-  x = x * x * x * (x * (x * 6 - 15) + 10);
-  return x * (b - a) + a;
+export function smootherStep(t: number, start: number, end: number) {
+  t = t * t * t * (t * (t * 6 - 15) + 10);
+  return t * (end - start) + start;
 }
-
-//deprecated
-// export function getVisibleChunks(
-//   pos: { x: number; y: number; z: number },
-//   chunkSize: ChunkSize,
-//   drawDistance: number
-// ) {
-//   const visibleChunks = [];
-//   const coords = worldToChunkCoords(pos.x, pos.y, pos.z, chunkSize);
-
-//   for (
-//     let x = coords.chunk.x - drawDistance;
-//     x <= coords.chunk.x + drawDistance;
-//     x++
-//   ) {
-//     for (
-//       let z = coords.chunk.z - drawDistance;
-//       z <= coords.chunk.z + drawDistance;
-//       z++
-//     ) {
-//       const dx = x - coords.chunk.x;
-//       const dz = z - coords.chunk.z;
-//       if (dx * dx + dz * dz <= drawDistance * drawDistance) {
-//         visibleChunks.push({ x, y: coords.chunk.y, z });
-//       }
-//     }
-//   }
-
-//   return visibleChunks;
-// }
