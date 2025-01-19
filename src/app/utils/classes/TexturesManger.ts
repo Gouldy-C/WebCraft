@@ -246,3 +246,66 @@ class TextureArrayLoader {
       ];
   }
 }
+
+// TODO Reference this for making the texture manager
+// import * as THREE from 'three';
+
+// // Load your textures
+// const loader = new THREE.TextureLoader();
+// const textures = [
+//     loader.load('texture1.jpg'),
+//     loader.load('texture2.jpg'),
+//     loader.load('texture3.jpg')
+// ];
+
+// // Create a texture array
+// const textureArray = new THREE.DataTextureArray(
+//     new Uint8Array(textures.length * 4 * 1024 * 1024), // Assuming textures are 1024x1024 RGBA
+//     1024,
+//     1024,
+//     textures.length
+// );
+
+// // Copy individual texture data to the texture array
+// for (let i = 0; i < textures.length; i++) {
+//     const imageData = textures[i].image.data;
+//     textureArray.image[i] = imageData;
+// }
+
+// // Update texture array properties
+// textureArray.format = THREE.RGBAFormat;
+// textureArray.type = THREE.UnsignedByteType;
+// textureArray.minFilter = THREE.LinearFilter;
+// textureArray.magFilter = THREE.LinearFilter;
+// textureArray.needsUpdate = true;
+
+// // Create a shader material
+// const shaderMaterial = new THREE.ShaderMaterial({
+//     uniforms: {
+//         textureArray: { value: textureArray },
+//         textureIndex: { value: 0 } // Initially use the first texture
+//     },
+//     vertexShader: `
+//         varying vec2 vUv;
+//         void main() {
+//             vUv = uv;
+//             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+//         }
+//     `,
+//     fragmentShader: `
+//         uniform sampler2DArray textureArray;
+//         uniform float textureIndex;
+//         varying vec2 vUv;
+//         void main() {
+//             vec4 color = texture(textureArray, vec3(vUv, textureIndex));
+//             gl_FragColor = color;
+//         }
+//     `
+// });
+
+// // Create a mesh
+// const geometry = new THREE.PlaneGeometry(10, 10);
+// const mesh = new THREE.Mesh(geometry, shaderMaterial);
+
+// // Add the mesh to the scene
+// scene.add(mesh);
