@@ -26,8 +26,6 @@ export interface TerrainGenParams {
   seed: string;
   chunkSize: ChunkSize;
   drawDistance: number;
-  lodDistance: number;
-  lod: number;
   fractalNoise: FractalNoiseParams;
   trees: {
     buffer: number;
@@ -87,14 +85,15 @@ export class TerrainManager extends THREE.Object3D {
 
   update(playerPosition: THREE.Vector3) {
     this.workerQueue.update();
-    const coords = worldToChunkCoords(playerPosition.x, playerPosition.y, playerPosition.z, this.chunkSize).chunk;
+    const coords = worldToChunkCoords(playerPosition.x, playerPosition.y, playerPosition.z, this.chunkSize.width).chunk;
     const curr = this.currentChunk
     let chunkChangedFlag = false
 
     if (coords.x !== curr.x || coords.z !== curr.z) {
       this.currentChunk = coords
       chunkChangedFlag = true
-      this.getVisibleChunksRemoveOldChunks(playerPosition);
+      this.getVisibleChunks(playerPosition);
+      this._removeOldChunks();
     }
 
     this.chunksManager.update(this.visibleChunksKeys, chunkChangedFlag);
@@ -106,17 +105,17 @@ export class TerrainManager extends THREE.Object3D {
   handleWorkerMessage(obj: ReturnGeometryData) {
     const { chunkKey, positionsBuffer, normalsBuffer, uvsBuffer, indicesBuffer } = obj
     this.generateMeshGeometry(
-        chunkKey,
-        positionsBuffer,
-        normalsBuffer,
-        uvsBuffer,
-        indicesBuffer
+      chunkKey,
+      positionsBuffer,
+      normalsBuffer,
+      indicesBuffer
     );
   }
 
   generateNewMeshes(newMeshesKeys: Set<string>) {
     if (newMeshesKeys.size === 0) return
     for (const meshKey of newMeshesKeys) {
+      if (!this.chunksManager.chunks[meshKey]) continue;
       if (this.meshes[meshKey]) continue;
       this.generateMesh(meshKey);
     }
@@ -191,7 +190,7 @@ export class TerrainManager extends THREE.Object3D {
       const vx = x + dx;
       const vy = y + dy;
       const vz = z + dz;
-      const chunkId = chunkKeyFromXYZ(vx, vy, vz, this.params.chunkSize);
+      const chunkId = chunkKeyFromXYZ(vx, vy, vz, this.params.chunkSize.width);
       if (set.has(chunkId)) continue;
       set.add(chunkId);
       this.generateMesh(chunkId)
@@ -199,7 +198,7 @@ export class TerrainManager extends THREE.Object3D {
   }
 
   getIntractableMeshes(x: number, y: number, z: number): THREE.Mesh[] {
-    const coords = worldToChunkCoords(x, y, z, this.params.chunkSize);
+    const coords = worldToChunkCoords(x, y, z, this.params.chunkSize.width);
     const meshes = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
@@ -217,13 +216,17 @@ export class TerrainManager extends THREE.Object3D {
     return meshes;
   }
 
-  getVisibleChunksRemoveOldChunks(playerPosition: THREE.Vector3) {
+  getVisibleChunks(playerPosition: THREE.Vector3) {
+    // const worldSize = this.chunkSize.width * Math.pow(2, this.params.drawDistance); // for quadtree only used for distant plane generation
+
     this.visibleChunksKeys = spiralGridKeys(
       0,
       this.params.drawDistance, 
       {x: this.currentChunk.x, z: this.currentChunk.z}
     )
-    // const worldSize = this.chunkSize.width * Math.pow(2, this.params.drawDistance); // for quadtree
+  }
+
+  _removeOldChunks() {
     
     const oldQueueKeys = setDifference(this.workerQueue.getQueueIds(), this.visibleChunksKeys)
     this.removeQueuedMeshes(oldQueueKeys);
@@ -235,10 +238,9 @@ export class TerrainManager extends THREE.Object3D {
     chunkKey: string,
     positionsBuffer: ArrayBuffer,
     normalsBuffer: ArrayBuffer,
-    uvsBuffer: ArrayBuffer,
     indicesBuffer: ArrayBuffer
   ) {
-    const { x: chunkX, y: chunkY, z: chunkZ } = coordsXYZFromKey(chunkKey);
+    const { x: chunkX, z: chunkZ } = coordsXYZFromKey(chunkKey);
     const difX = chunkX - this.currentChunk.x;
     const difZ = chunkZ - this.currentChunk.z;
     const distance = Math.abs(difX) + Math.abs(difZ)

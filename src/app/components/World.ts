@@ -20,13 +20,11 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    drawDistance: 15,
+    drawDistance: 10,
     chunkSize: { width: 64, height: 256 },
     seed: "default",
-    lodDistance: 5,
-    lod: 2,
     fractalNoise: {
-      amplitude: 0.35,
+      amplitude: 0.7,
       frequency: 0.002,
       octaves: 4,
       lacunarity: 2.0,
@@ -55,22 +53,10 @@ export class World extends THREE.Group {
   inputManager: InputManager;
   params: WorldStore;
 
-  // lighting: Lighting;
   terrain: TerrainManager;
-  // player: Player;
   orbitCamera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   activeCamera: THREE.Camera;
-
-  // time
-  // fullDayTime = 500;
-  // time: Time = new Time({
-  //   time: 0,
-  //   days: 0,
-  //   years: 0,
-  //   minutesInDay: this.fullDayTime / 60,
-  //   daysInYear: 365,
-  // });
 
   sun: THREE.DirectionalLight = new THREE.DirectionalLight();
   ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
@@ -95,12 +81,6 @@ export class World extends THREE.Group {
 
     this.terrain = new TerrainManager(this);
     this.add(this.terrain);
-
-    // this.player = new Player(this);
-    // this.add(this.player);
-
-    // this.lighting = new Lighting(this);
-    // this.add(this.lighting);
 
     this.orbitCamera = new THREE.PerspectiveCamera(
       75,
@@ -129,32 +109,16 @@ export class World extends THREE.Group {
     this.add(this.ambientLight);
 
     this.pos = new THREE.Vector3(0, 0, 1);
+
+    const axesHelper = new THREE.AxesHelper(
+      this.params.terrain.chunkSize.height
+    );
+    this.add(axesHelper);
   }
 
   update(dt: number) {
     this.accumulator += dt;
-    // if (dt) {
-    //   this.time.update(dt);
-    // }
-
-    // if (this.inputManager.getCurrentlyPressedActions().length > 0) {
-    //   this.player.controls.lock();
-    // }
-
-    // this.activeCamera = this.player.controls.isLocked
-    //   ? this.player.camera
-    //   : this.orbitCamera;
-
-    // while (this.accumulator >= this.timeStep) {
-    //   if (this.player.controls.isLocked) {
-    //     this.player.update(this.timeStep);
-    //   }
-    //   this.accumulator -= this.timeStep;
-    // }
-    // this.pos = this.pos.add(new THREE.Vector3(0.25, 0, 0.25));
     this.terrain.update(this.pos);
-    // this.lighting.update(this.player.position);
-
     this.controls.update();
   }
 

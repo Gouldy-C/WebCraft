@@ -53,7 +53,6 @@ export class ChunksManager {
   update(visibleChunksKeys: Set<string>, chunkChangedFlag: boolean) {
     this.workerQueue.update()
     if (chunkChangedFlag) {
-      
       const oldQueueKeys = setDifference(this.workerQueue.getQueueIds(), visibleChunksKeys)
       this._removeQueuedChunks(oldQueueKeys);
       
@@ -94,7 +93,7 @@ export class ChunksManager {
   }
 
   getChunkForVoxel(x: number, y: number, z: number) {
-    const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, this.chunkSize).chunk
+    const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, this.chunkSize.width).chunk
     return this.chunks[keyFromXYZCoords(chunkX, chunkY, chunkZ)];
   }
 
@@ -103,7 +102,7 @@ export class ChunksManager {
     if (!chunkData) {
       return 0;
     }
-    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize);
+    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize.width);
     return chunkData[voxelIndex];
   }
 
@@ -117,7 +116,7 @@ export class ChunksManager {
       ["diffs", keyFromXYZCoords(x, y, z)],
       { id: v }
     );
-    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize);
+    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize.width);
     chunkData[voxelIndex] = v;
   }
 

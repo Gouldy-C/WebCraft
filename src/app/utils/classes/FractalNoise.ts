@@ -1,7 +1,6 @@
 import * as SimplexNoise from "simplex-noise";
 import * as FastSimplexNoise from "fast-simplex-noise";
-import alea from "alea";
-import { clamp, } from "../generalUtils";
+import { RNG } from "../generalUtils";
 
 export interface FractalNoiseParams {
   amplitude: number;
@@ -13,65 +12,64 @@ export interface FractalNoiseParams {
 };
 
 export class FractalNoise {
-  private readonly fast = true;
+  private readonly fast: boolean;
   private readonly amplitude: number;
   private readonly frequency: number;
   private readonly octaves: number;
   private readonly lacunarity: number;
   private readonly persistence: number;
-  private readonly seed: string | number
-  private readonly offset: number;
-  private readonly noise2D: CallableFunction
-  private readonly noise3D: CallableFunction
+  private readonly seed: string | number;
+  private readonly noise2D: (x: number, y: number) => number;
+  private readonly noise3D: (x: number, y: number, z: number) => number;
 
   constructor(params: FractalNoiseParams, seed: string | number) {
+    this.fast = true;
     this.amplitude = params.amplitude ?? 0.5;
     this.frequency = params.frequency ?? 0.0015;
-    this.octaves =  params.octaves ?? 4;
+    this.octaves = params.octaves ?? 4;
     this.lacunarity = params.lacunarity ?? 2.0;
     this.persistence = params.persistence ?? 0.5;
-    this.offset = params.offset ?? 0.4;
     this.seed = seed ?? "default";
+    const rng = RNG(this.seed);
     if (this.fast) {
-      this.noise2D = FastSimplexNoise.makeNoise2D(alea(this.seed))
-      this.noise3D = FastSimplexNoise.makeNoise3D(alea(this.seed))
+      this.noise2D = FastSimplexNoise.makeNoise2D(rng);
+      this.noise3D = FastSimplexNoise.makeNoise3D(rng);
     } else {
-      this.noise2D = SimplexNoise.createNoise2D(alea(this.seed))
-      this.noise3D = SimplexNoise.createNoise3D(alea(this.seed))
+      this.noise2D = SimplexNoise.createNoise2D(rng);
+      this.noise3D = SimplexNoise.createNoise3D(rng);
     }
   }
 
-  public fractal2D(x: number, y: number, ) {
-    let freq = this.frequency;
-    let amplitude = this.amplitude
+  public fractal2D(x: number, y: number): number {
+    let frequency = this.frequency;
+    let amplitude = this.amplitude;
     let total = 0;
     let maxValue = 0;
 
     for (let i = 0; i < this.octaves; i++) {
-      total += this.noise2D(x * freq, y * freq) * amplitude;
-      maxValue += this.amplitude;
+      const noiseValue = this.noise2D(x * frequency, y * frequency);
+      total += noiseValue * amplitude;
+      maxValue += amplitude;
       amplitude *= this.persistence;
-      freq *= this.lacunarity;
+      frequency *= this.lacunarity;
     }
-    total = total / maxValue;
-    return total;
+    return total * (this.amplitude / maxValue);
   }
 
-  public fractal3D(x: number, y: number, z: number) {
-    let freq = this.frequency;
-    let amplitude = this.amplitude
+  public fractal3D(x: number, y: number, z: number): number {
+    let frequency = this.frequency;
+    let amplitude = this.amplitude;
     let total = 0;
     let maxValue = 0;
 
     for (let i = 0; i < this.octaves; i++) {
-      total += this.noise3D(x * freq, y * freq, z * freq) * amplitude;
-      maxValue += this.amplitude;
+      const noiseValue = this.noise3D(x * frequency, y * frequency, z * frequency);
+      total += noiseValue * amplitude;
+      maxValue += amplitude;
       amplitude *= this.persistence;
-      freq *= this.lacunarity;
+      frequency *= this.lacunarity;
     }
-    
-    total = total / maxValue;
-    return total;
+    return total * (this.amplitude / maxValue);
   }
 }
 

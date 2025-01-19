@@ -23,11 +23,11 @@ export interface WorkerPostMessage {
 }
 
 export class WorkerQueue <T extends RequestObj> {
-  private queueIds: Set<string> = new Set();
+  queueIds: Set<string> = new Set();
   private queue: Map<string, T> = new Map();
   private params: Params;
   private workers: Worker[] = [];
-  private workersBusy: boolean[] = [];
+  workersBusy: boolean[] = [];
 
   constructor(params: Params) {
     this.params = params;
@@ -53,19 +53,21 @@ export class WorkerQueue <T extends RequestObj> {
     if (this.queue.size === 0) return;
     if (!this.workersBusy.includes(false)) return;
     
-    const requestObj = this._dequeue();
-    if (!requestObj) return;
-    if (!requestObj.id) return;
-    if (!requestObj.type) return;
-    if (!requestObj.data) return;
-    
-    const workerId = this.workersBusy.indexOf(false);
-    this.workersBusy[workerId] = true;
-    this.workers[workerId].postMessage({
-      id: requestObj.id,
-      request: requestObj,
-      workerId: workerId,
-    });
+    for (let i = 0; i < this.params.numberOfWorkers; i++) {
+      if (this.workersBusy[i]) continue;
+      const requestObj = this._dequeue();
+      if (!requestObj) continue;
+      if (!requestObj.id) continue;
+      if (!requestObj.type) continue;
+      if (!requestObj.data) continue;
+      
+      this.workersBusy[i] = true;
+      this.workers[i].postMessage({
+        id: requestObj.id,
+        request: requestObj,
+        workerId: i,
+      })
+    }
   }
 
   private _handleWorkerMessage(e: MessageEvent) {
@@ -121,6 +123,6 @@ export class WorkerQueue <T extends RequestObj> {
   removeRequest(id: string): boolean {
     const idExists = this.queueIds.delete(id);
     const requestExists = this.queue.delete(id);
-    return idExists && requestExists;
+    return idExists || requestExists;
   }
 }

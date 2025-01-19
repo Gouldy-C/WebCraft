@@ -1,4 +1,5 @@
-import { TerrainGenParams } from "../components/TerrainManager";
+import { Chunk } from "../components/Chunk";
+import { ChunkSize, TerrainGenParams } from "../components/TerrainManager";
 import { FractalNoise } from "./classes/FractalNoise";
 import alea from "alea";
 
@@ -20,7 +21,7 @@ export function measureTime<T>(fn: () => T, label: string = "Function"): T {
 
 
 // RNG
-export function RNG(seed: string) {
+export function RNG(seed: string | number) {
   return alea(seed);
 }
 
@@ -45,14 +46,14 @@ export function indexFromXYZCoords(
   x: number,
   y: number,
   z: number,
-  chunkSize: number,
+  chunkSize: ChunkSize,
 ): number {
-  const voxelX = ((x % chunkSize) + chunkSize) % chunkSize | 0;
-  const voxelZ = ((z % chunkSize) + chunkSize) % chunkSize | 0;
-  const voxelY = ((y % chunkSize) + chunkSize) % chunkSize | 0;
+  const voxelX = ((x % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
+  const voxelZ = ((z % chunkSize.width) + chunkSize.width) % chunkSize.width | 0;
+  const voxelY = ((y % chunkSize.height) + chunkSize.height) % chunkSize.height | 0;
   return (
-    voxelY * (chunkSize * chunkSize) +
-    voxelZ * chunkSize +
+    voxelY * (chunkSize.width * chunkSize.width) +
+    voxelZ * chunkSize.width +
     voxelX
   );
 }
@@ -260,7 +261,7 @@ export function clamp(value: number, lowerBound: number, upperBound: number) {
 }
 
 export function normalize(currentValue: number, minValue: number, maxValue: number) {
-  return (currentValue - minValue) / (maxValue - minValue);
+  return 2 * (currentValue - minValue) / (maxValue - minValue) - 1
 }
 
 export function randRange(minValue: number, maxValue: number) {

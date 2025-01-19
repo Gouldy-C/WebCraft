@@ -9,7 +9,7 @@ export class Chunk {
   resolution: number
   binaryData: Uint32Array
 
-  constructor() {
+  // constructor() {
 
-  }
+  // }
 }
