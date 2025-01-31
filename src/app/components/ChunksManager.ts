@@ -1,4 +1,4 @@
-import { ChunkSize, TerrainGenParams } from "./TerrainManager";
+import { TerrainGenParams } from "./TerrainManager";
 import { World } from "./World";
 import {
   indexFromXYZCoords,
@@ -6,12 +6,12 @@ import {
   setDifference,
   worldToChunkCoords,
 } from "../utils/generalUtils";
-import { RequestObj, WorkerQueue } from "../utils/classes/WorkerQueue";
+import { WorkerObj , WorkerQueue } from "../utils/classes/WorkerQueue";
 import { ReturnVoxelData } from "../utils/workers/genVoxelData";
 import { VoxelGenXYZ } from "../utils/classes/VoxelGenXYZ";
 
 
-interface RequestData extends RequestObj {
+interface RequestData extends WorkerObj {
   id: string;
   type: string;
   data: {
@@ -25,8 +25,8 @@ export class ChunksManager {
   world: World;
 
   params: TerrainGenParams;
-  chunkSize: ChunkSize;
-  chunks: Record<string, Uint16Array | null>
+  chunkSize: number;
+  chunks: Record<string, Uint8Array>
   chunksKeys: Set<string>
 
   workerQueue: WorkerQueue<RequestData>;
@@ -89,11 +89,11 @@ export class ChunksManager {
   _handleWorkerMessage(obj:ReturnVoxelData) {
     const { chunkKey, voxelDataBuffer } = obj
     this.chunksKeys.add(chunkKey);
-    this.chunks[chunkKey] = new Uint16Array(voxelDataBuffer);
+    this.chunks[chunkKey] = new Uint8Array(voxelDataBuffer);
   }
 
   getChunkForVoxel(x: number, y: number, z: number) {
-    const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, this.chunkSize.width).chunk
+    const { x:chunkX, y: chunkY, z:chunkZ } = worldToChunkCoords(x, y, z, this.chunkSize).chunk
     return this.chunks[keyFromXYZCoords(chunkX, chunkY, chunkZ)];
   }
 
@@ -102,7 +102,7 @@ export class ChunksManager {
     if (!chunkData) {
       return 0;
     }
-    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize.width);
+    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize);
     return chunkData[voxelIndex];
   }
 
@@ -116,7 +116,7 @@ export class ChunksManager {
       ["diffs", keyFromXYZCoords(x, y, z)],
       { id: v }
     );
-    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize.width);
+    const voxelIndex = indexFromXYZCoords(x, y, z, this.chunkSize);
     chunkData[voxelIndex] = v;
   }
 

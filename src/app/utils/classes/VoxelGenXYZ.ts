@@ -26,17 +26,16 @@ export class VoxelGenXYZ {
     surfaceHeight: -Infinity,
     heightValue: -Infinity,
   };
+  heights: Record<string, { surfaceHeight: number; heightValue: number }> = {};
 
   constructor(params: TerrainGenParams) {
     this.params = params;
     this.fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
     this.resources = this._generateResources(params);
-    // TODO make cache for heights
-    // this.heights = {}
   }
 
   getBlockIdXYZ(x: number, y: number, z: number) {
-    const heights = this.getHeightsXYZ(x, y, z);
+    const heights = this.getHeightsXZ(x, z);
 
     const terrain = this._getTerrainXYZ(x, y, z, heights);
     if (terrain) return terrain;
@@ -44,16 +43,23 @@ export class VoxelGenXYZ {
     return BLOCKS.air.id;
   }
 
-  getHeightsXYZ(x: number, y: number, z: number) {
-    let heights = null;
-    if (this.previousVoxel.x === x && this.previousVoxel.z === z) {
-      heights = this.previousSurfaceHeight;
-    } else {
-      heights = this._getSurfaceHeightXYZ(x, y, z);
-      this.previousVoxel = { x, y, z };
-      this.previousSurfaceHeight = heights;
+  getHeightsXZ(x: number, z: number) {
+    let heights = this.heights[keyFromXZCoords(x, z)]
+    if (heights) {
+      return heights;
     }
+    heights = this._getSurfaceHeightXZ(x, z);
+    this.heights[keyFromXZCoords(x, z)] = heights
     return heights;
+  }
+
+  _getSurfaceHeightXZ(x: number, z: number) {
+    const height = this.params.worldHeight;
+    const noiseValue = this.fractalNoise.fractal2D(x, z);
+    const heightValue = (noiseValue + 1) / 2;
+    const blockHeight = Math.floor(heightValue * height);
+    const surfaceHeight = clamp(blockHeight, 0, height - 1);
+    return { surfaceHeight, heightValue };
   }
 
   _getTerrainXYZ(
@@ -63,7 +69,7 @@ export class VoxelGenXYZ {
     heights?: { surfaceHeight: number; heightValue: number }
   ) {
     const { surfaceHeight, heightValue } =
-      heights || this.getHeightsXYZ(x, y, z);
+      heights || this.getHeightsXZ(x, z);
     if (y > surfaceHeight) return BLOCKS.air.id;
 
     const isBedrock = y <= (Math.random() > 0.5 ? 0 : 1);
@@ -105,6 +111,19 @@ export class VoxelGenXYZ {
       }
     }
     return BLOCKS.air.id;
+  }
+
+  _generateResources(params: TerrainGenParams) {
+    return RESOURCES.map((resource) => {
+      return {
+        noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
+        resource,
+        scaleX: resource.scale.x,
+        scaleY: resource.scale.y,
+        scaleZ: resource.scale.z,
+        scarcity: resource.scarcity,
+      };
+    });
   }
 
   // isTreeAtXYZ(
@@ -183,25 +202,5 @@ export class VoxelGenXYZ {
   //   return canopyCoords;
   // }
 
-  _getSurfaceHeightXYZ(x: number, y: number, z: number) {
-    const { height } = this.params.chunkSize;
-    const noiseValue = this.fractalNoise.fractal2D(x, z);
-    const heightValue = (noiseValue + 1) / 2;
-    const blockHeight = Math.floor(heightValue * height);
-    const surfaceHeight = clamp(blockHeight, 0, height - 1);
-    return { surfaceHeight, heightValue };
-  }
 
-  _generateResources(params: TerrainGenParams) {
-    return RESOURCES.map((resource) => {
-      return {
-        noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
-        resource,
-        scaleX: resource.scale.x,
-        scaleY: resource.scale.y,
-        scaleZ: resource.scale.z,
-        scarcity: resource.scarcity,
-      };
-    });
-  }
 }

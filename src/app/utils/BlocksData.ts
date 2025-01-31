@@ -13,6 +13,7 @@ export interface BasicBlock {
     front: string;
     back: string;
   };
+  transparent: boolean
   material?: THREE.Material[] | THREE.Material
 }
 export interface Resource extends BasicBlock {
@@ -24,6 +25,7 @@ export const BLOCKS: Record<string, Block> = {
   air: {
     id: 0,
     name: 'air',
+    transparent: true,
     textures: {
       top: 'air',
       bottom: 'air',
@@ -36,6 +38,7 @@ export const BLOCKS: Record<string, Block> = {
   bedrock: {
     id: 1,
     name: 'bedrock',
+    transparent: false,
     textures: {
       top: 'bedrock',
       bottom: 'bedrock',
@@ -48,6 +51,7 @@ export const BLOCKS: Record<string, Block> = {
   cloud: {
     id: 2,
     name: 'cloud',
+    transparent: true,
     textures: {
       top: 'cloud',
       bottom: 'cloud',
@@ -60,6 +64,7 @@ export const BLOCKS: Record<string, Block> = {
   grass: {
     id: 3,
     name: 'grass',
+    transparent: false,
     textures: {
       top: 'grass_top',
       bottom: 'dirt',
@@ -72,6 +77,7 @@ export const BLOCKS: Record<string, Block> = {
   dirt: {
     id: 4,
     name: 'dirt',
+    transparent: false,
     textures: {
       top: 'dirt',
       bottom: 'dirt',
@@ -84,6 +90,7 @@ export const BLOCKS: Record<string, Block> = {
   sand: {
     id: 5,
     name: 'sand',
+    transparent: false,
     textures: {
       top: 'sand',
       bottom: 'sand',
@@ -96,6 +103,7 @@ export const BLOCKS: Record<string, Block> = {
   stone: {
     id: 6,
     name: 'stone',
+    transparent: false,
     textures: {
       top: 'stone',
       bottom: 'stone',
@@ -110,6 +118,7 @@ export const BLOCKS: Record<string, Block> = {
   water: {
     id: 7,
     name: 'water',
+    transparent: true,
     textures: {
       top: 'water',
       bottom: 'water',
@@ -122,6 +131,7 @@ export const BLOCKS: Record<string, Block> = {
   cobblestone: {
     id: 8,
     name: 'cobblestone',
+    transparent: false,
     textures: {
       top: 'cobblestone',
       bottom: 'cobblestone',
@@ -134,6 +144,7 @@ export const BLOCKS: Record<string, Block> = {
   coal_ore: {
     id: 9,
     name: 'coalOre',
+    transparent: false,
     textures: {
       top: 'coal_ore',
       bottom: 'coal_ore',
@@ -148,6 +159,7 @@ export const BLOCKS: Record<string, Block> = {
   iron_ore: {
     id: 10,
     name: 'ironOre',
+    transparent: false,
     textures: {
       top: 'iron_ore',
       bottom: 'iron_ore',
@@ -162,6 +174,7 @@ export const BLOCKS: Record<string, Block> = {
   snow_dirt: {
     id: 11,
     name: 'snow_dirt',
+    transparent: false,
     textures: {
       top: 'snow',
       bottom: 'snow_dirt_side',
@@ -174,6 +187,7 @@ export const BLOCKS: Record<string, Block> = {
   snow: {
     id: 12,
     name: 'snow',
+    transparent: false,
     textures: {
       top: 'snow',
       bottom: 'snow',
@@ -186,6 +200,7 @@ export const BLOCKS: Record<string, Block> = {
   oak_log: {
     id: 13,
     name: 'oak_log',
+    transparent: false,
     textures: {
       top: 'log_oak_top',
       bottom: 'log_oak_top',
@@ -198,6 +213,7 @@ export const BLOCKS: Record<string, Block> = {
   oak_leaves: {
     id: 14,
     name: 'oak_leaves',
+    transparent: false,
     textures: {
       top: 'oak_leaves',
       bottom: 'oak_leaves',

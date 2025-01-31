@@ -1,35 +1,31 @@
 
 
-export interface Params {
+export interface WorkerQueueParams {
   url: URL
   numberOfWorkers: number;
   callback: CallableFunction;
 }
 
-export interface RequestObj {
+export interface WorkerObj {
   id: string;
   type: string;
   data: any;
 };
 
-export interface ReturnObj {
-  data: any;
-};
-
 export interface WorkerPostMessage {
   id: string;
-  request: RequestObj | ReturnObj;
   workerId: number;
+  request: WorkerObj;
 }
 
-export class WorkerQueue <T extends RequestObj> {
-  queueIds: Set<string> = new Set();
+export class WorkerQueue <T extends WorkerObj> {
+  private queueIds: Set<string> = new Set();
   private queue: Map<string, T> = new Map();
-  private params: Params;
+  private params: WorkerQueueParams;
   private workers: Worker[] = [];
-  workersBusy: boolean[] = [];
+  private workersBusy: boolean[] = [];
 
-  constructor(params: Params) {
+  constructor(params: WorkerQueueParams) {
     this.params = params;
 
     for (let i = 0; i < params.numberOfWorkers; i++) {
@@ -64,8 +60,8 @@ export class WorkerQueue <T extends RequestObj> {
       this.workersBusy[i] = true;
       this.workers[i].postMessage({
         id: requestObj.id,
-        request: requestObj,
         workerId: i,
+        request: requestObj,
       })
     }
   }
@@ -73,8 +69,8 @@ export class WorkerQueue <T extends RequestObj> {
   private _handleWorkerMessage(e: MessageEvent) {
     const { id, request, workerId } = e.data as WorkerPostMessage;
     this.workersBusy[workerId] = false;
-    this.params.callback(request.data);
     this.queueIds.delete(id);
+    this.params.callback(request);
   }
 
   private _enqueue(request: T): boolean {
@@ -104,8 +100,8 @@ export class WorkerQueue <T extends RequestObj> {
     return request;
   }
 
-  getQueueIds() {
-    return this.queueIds
+  getQueueIds(): Set<string> {
+    return new Set(this.queueIds);
   }
 
   isRequestInQueue(id: string): boolean {

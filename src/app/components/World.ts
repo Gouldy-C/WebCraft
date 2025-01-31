@@ -4,7 +4,6 @@ import { DataStore } from "../utils/classes/DataStore";
 import { TimeObject } from "./unused/Time";
 import { TerrainGenParams, TerrainManager } from "./TerrainManager";
 import { MainScene } from "../pages/MainScene";
-// import { Lighting } from "./Lighting";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 export interface WorldStore {
@@ -20,8 +19,10 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    drawDistance: 10,
-    chunkSize: { width: 64, height: 256 },
+    chunkSize: 64,
+    maxWorldHeight: 256,
+    hDrawDist: 6,
+    vDrawDist: 2,
     seed: "default",
     fractalNoise: {
       amplitude: 0.7,
@@ -79,20 +80,21 @@ export class World extends THREE.Group {
     this.params = params;
     this.worldStore = new DataStore(params);
 
-    this.terrain = new TerrainManager(this);
+    this.terrain = new TerrainManager(this, new THREE.Vector3(0, 0, 0));
     this.add(this.terrain);
 
     this.orbitCamera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      this.params.terrain.chunkSize.width * this.params.terrain.drawDistance +
+      this.params.terrain.chunkSize * this.params.terrain.hDrawDist +
         5000
     );
+    const center = this.params.terrain.chunkSize / 2;
     this.orbitCamera.position.set(
-      this.params.terrain.chunkSize.width / 2,
-      this.params.terrain.chunkSize.height / 2,
-      this.params.terrain.chunkSize.width / 2
+      center,
+      this.params.terrain.vDrawDist * this.params.terrain.chunkSize,
+      center
     );
 
     this.controls = new OrbitControls(
@@ -111,9 +113,10 @@ export class World extends THREE.Group {
     this.pos = new THREE.Vector3(0, 0, 1);
 
     const axesHelper = new THREE.AxesHelper(
-      this.params.terrain.chunkSize.height
+      this.params.terrain.vDrawDist * this.params.terrain.chunkSize
     );
     this.add(axesHelper);
+
   }
 
   update(dt: number) {

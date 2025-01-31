@@ -4,10 +4,13 @@ import { applyChunkDiffs } from "../chunkGenFunctions";
 import {
   coordsXYZFromKey,
   indexFromXYZCoords,
+  keyFromXZCoords,
+  lerp,
   measureTime,
 } from "../generalUtils";
 import { WorkerPostMessage } from "../classes/WorkerQueue";
 import { VoxelGenXYZ } from "../classes/VoxelGenXYZ";
+import { BitArray } from "../classes/BitArray";
 
 export interface ReturnVoxelData {
   chunkKey: string;
@@ -127,7 +130,6 @@ self.onmessage = (e: MessageEvent) => {
 
 //     }
 //   }
-
 // }
 
 function getVoxelTypes(message: WorkerPostMessage) {
@@ -135,40 +137,73 @@ function getVoxelTypes(message: WorkerPostMessage) {
   const data = message.request.data as RequestVoxelData;
   const { chunkKey, params, diffs } = data;
   const voxelGenXYZ = new VoxelGenXYZ(params);
-  const { x: chunkX, z: chunkZ } = coordsXYZFromKey(chunkKey);
-  const size = params.chunkSize;
-  const { width, height } = params.chunkSize;
-  const voxelData = new Uint16Array(
-    width * height * width + width * width
-  ).fill(0);
-  const gx = chunkX * (width - 2);
-  const gz = chunkZ * (width - 2);
+  const { x: chunkX, y: chunkY, z: chunkZ } = coordsXYZFromKey(chunkKey);
+  const size = params.chunkSize
+  const voxelData = new Uint8Array((size * size * size) + (size * size))
+  const binaryData = new BitArray(size * size)
+  const gx = chunkX * (size - 2);
+  const gy = chunkY * size
+  const gz = chunkZ * (size - 2);
+  const heightMap: Record<string, number> = {}
+  const sampleRate = 7
 
-  for (let z = 0; z < width; z++) {
-    for (let x = 0; x < width; x++) {
-      const surfaceHeight = voxelGenXYZ.getHeightsXYZ(
+  for (let x = 0; x <= size; x += sampleRate) {
+    for (let z = 0; z <= size; z += sampleRate) {
+      const surfaceHeight = voxelGenXYZ.getHeightsXZ(
         x + gx,
-        0,
         z + gz
       ).surfaceHeight;
-      const heightIndex = x + (z * width) + (width * width * height);
-      voxelData[heightIndex] = surfaceHeight;
-      for (let y = surfaceHeight; y >= 0; y--) {
+      heightMap[keyFromXZCoords(x, z)] = surfaceHeight
+    }
+  }
+
+  for (let x = 0; x < size; x++) {
+    const xLow = Math.floor(x / sampleRate) * sampleRate;
+    const xHigh = xLow + sampleRate >= size - 1 ? size - 1 : xLow + sampleRate;
+    const xPercent = 1 / sampleRate * (x % sampleRate)
+    
+    for (let z = 0; z < size; z++) {
+      if (x % sampleRate === 0 && z % sampleRate === 0) continue
+      const zLow = Math.floor(z / sampleRate) * sampleRate;
+      const zHigh = zLow + sampleRate >= size - 1 ? size - 1 : zLow + sampleRate;
+      const zPercent = 1 / sampleRate * (z % sampleRate)
+
+      const xHeightLow = heightMap[keyFromXZCoords(xLow, z)];
+      const xHeightHigh = heightMap[keyFromXZCoords(xHigh, z)];
+      const xLerp = lerp(xPercent, xHeightLow, xHeightHigh);
+
+      const zHeightLow = heightMap[keyFromXZCoords(x, zLow)];
+      const zHeightHigh = heightMap[keyFromXZCoords(x, zHigh)];
+      const zLerp = lerp(zPercent, zHeightLow, zHeightHigh);
+      
+      heightMap[keyFromXZCoords(x, z)] = Math.floor((xLerp + zLerp) / 2);
+    }
+  }
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      for (let z = 0; z < size; z++) {
+        const surfaceHeight = heightMap[keyFromXZCoords(x, z)];
+        const heightIndex = x + (z * size) + (size * size * size)
+        voxelData[heightIndex] = surfaceHeight;
         const i = indexFromXYZCoords(x, y, z, size);
         if (voxelData[i] !== 0) continue;
-        const voxels: number = voxelGenXYZ.getBlockIdXYZ(x + gx, y, z + gz);
-        if (!voxels) continue;
-        voxelData[i] = voxels;
+        const voxel: number = voxelGenXYZ.getBlockIdXYZ(x + gx, y + gy, z + gz);
+        if (!voxel) continue;
+        binaryData.setBit(x + (y * size));
+        voxelData[i] = voxel;
       }
     }
   }
 
-  applyChunkDiffs(chunkX, chunkZ, diffs, voxelData, size);
+  // applyChunkDiffs(chunkX, chunkZ, diffs, voxelData, size);
 
   const returnData: WorkerPostMessage = {
     id: message.id,
     workerId,
     request: {
+      id: message.id,
+      type: 'voxelData',
       data: {
         chunkKey,
         voxelDataBuffer: voxelData.buffer,
@@ -183,36 +218,38 @@ function processGeometryData(message: WorkerPostMessage) {
   const workerId = message.workerId;
   const data = message.request.data as RequestGeometryData;
   const { chunkKey, params, voxelDataBuffer } = data;
-  const { width, height } = params.chunkSize;
+  const size = params.chunkSize;
+  const worldHeight = params.worldHeight;
+  const height = params.worldHeight;
+
 
   let positions = [];
   let normals = [];
   let indices = [];
   let voxelData: Uint16Array | null = new Uint16Array(voxelDataBuffer);
 
-  for (let z = 1; z < width - 1; z++) {
-    for (let x = 1; x < width - 1; x++) {
-      const surfaceHeight: number =
-        voxelData[x + (z * width) + (width * width * height)];
-      for (let y = surfaceHeight; y >= 0; y--) {
-        const index = x + z * width + width * width * y;
+
+  for (let z = 1; z < size - 1; z++) {
+    for (let x = 1; x < size - 1; x++) {
+      for (let y = 0; y < size; y++) {
+        const index = x + z * size + size * size * y;
         if (voxelData[index] === BLOCKS.air.id) continue;
         for (const { dir, corners } of VoxelFaces) {
           let nX = x + dir[0];
           let nY = y + dir[1];
           let nZ = z + dir[2];
 
-          let neighborVoxelId: number | boolean = false;
+          let neighborVoxelId: number = 0;
           const neighborInChunk =
             nX >= 0 &&
-            nX < width &&
+            nX < size &&
             nY >= 0 &&
-            nY < height &&
+            nY < size &&
             nZ >= 0 &&
-            nZ < width;
+            nZ < size;
 
           if (neighborInChunk) {
-            const neighborIndex = nX + nZ * width + width * width * nY;
+            const neighborIndex = nX + nZ * size + size * size * nY;
             neighborVoxelId = voxelData[neighborIndex];
           }
 
@@ -226,38 +263,77 @@ function processGeometryData(message: WorkerPostMessage) {
           }
         }
       }
-      for (let y = surfaceHeight + 1; y < height; y++) {
-        const index = x + z * width + width * width * y;
-        const voxel = voxelData[index];
-        if (voxel === BLOCKS.air.id) continue;
-        for (const { dir, corners } of VoxelFaces) {
-          let nX = x + dir[0];
-          let nY = y + dir[1];
-          let nZ = z + dir[2];
-
-          const neighborInChunk =
-            nX >= 0 &&
-            nX < width &&
-            nY >= 0 &&
-            nY < height &&
-            nZ >= 0 &&
-            nZ < width;
-
-          if (!neighborInChunk) continue;
-          const neighborIndex = nX + nZ * width + width * width * nY;
-          const neighborVoxel = voxelData[neighborIndex];
-          if (neighborVoxel === BLOCKS.air.id) {
-            const ndx = positions.length / 3;
-            for (const pos of corners) {
-              positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
-              normals.push(...dir);
-            }
-            indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
-          }
-        }
-      }
     }
   }
+
+  // for (let z = 1; z < size - 1; z++) {
+  //   for (let x = 1; x < size - 1; x++) {
+  //     const surfaceHeight: number =
+  //       voxelData[x + (z * size) + (size * size * height)];
+  //     for (let y = 0; y < size; y++) {
+  //       const index = x + z * size + size * size * y;
+  //       if (voxelData[index] === BLOCKS.air.id) continue;
+  //       for (const { dir, corners } of VoxelFaces) {
+  //         let nX = x + dir[0];
+  //         let nY = y + dir[1];
+  //         let nZ = z + dir[2];
+
+  //         let neighborVoxelId: number | boolean = false;
+  //         const neighborInChunk =
+  //           nX >= 0 &&
+  //           nX < size &&
+  //           nY >= 0 &&
+  //           nY < size &&
+  //           nZ >= 0 &&
+  //           nZ < size;
+
+  //         if (neighborInChunk) {
+  //           const neighborIndex = nX + nZ * size + size * size * nY;
+  //           neighborVoxelId = voxelData[neighborIndex];
+  //         }
+
+  //         if (neighborVoxelId === BLOCKS.air.id) {
+  //           const ndx = positions.length / 3;
+  //           for (const pos of corners) {
+  //             positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
+  //             normals.push(...dir);
+  //           }
+  //           indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
+  //         }
+  //       }
+  //     }
+  //     // for (let y = surfaceHeight + 1; y < height; y++) {
+  //     //   const index = x + z * size + size * size * y;
+  //     //   const voxel = voxelData[index];
+  //     //   if (voxel === BLOCKS.air.id) continue;
+  //     //   for (const { dir, corners } of VoxelFaces) {
+  //     //     let nX = x + dir[0];
+  //     //     let nY = y + dir[1];
+  //     //     let nZ = z + dir[2];
+
+  //     //     const neighborInChunk =
+  //     //       nX >= 0 &&
+  //     //       nX < size &&
+  //     //       nY >= 0 &&
+  //     //       nY < size &&
+  //     //       nZ >= 0 &&
+  //     //       nZ < size;
+
+  //     //     if (!neighborInChunk) continue;
+  //     //     const neighborIndex = nX + (nZ * size) + (size * size * nY);
+  //     //     const neighborVoxel = voxelData[neighborIndex];
+  //     //     if (neighborVoxel === BLOCKS.air.id) {
+  //     //       const ndx = positions.length / 3;
+  //     //       for (const pos of corners) {
+  //     //         positions.push(pos[0] + x, pos[1] + y, pos[2] + z);
+  //     //         normals.push(...dir);
+  //     //       }
+  //     //       indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3);
+  //     //     }
+  //     //   }
+  //     // }
+  //   }
+  // }
 
   const positionsBuffer = new Float32Array(positions);
   const normalsBuffer = new Int8Array(normals);
@@ -271,6 +347,8 @@ function processGeometryData(message: WorkerPostMessage) {
     id: message.id,
     workerId,
     request: {
+      id: message.id,
+      type: 'meshData',
       data: {
         chunkKey,
         positionsBuffer: positionsBuffer.buffer,

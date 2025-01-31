@@ -23,3 +23,10 @@
 - Caves (Remove areas for caves)
 - Populate Structures
 - Populate Decorative (Trees, NPCs, Animals, resources)
+
+### Multiplayer
+- WebRTC for peer to peer connection
+- PeerJS for multiplayer packet exchange and handshake server
+- libsodium.js for encryption
+- msgpack.js for serialization
+- Zlib.js for compression
