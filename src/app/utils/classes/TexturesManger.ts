@@ -150,11 +150,11 @@ class TextureArrayLoader {
   private textureArrayHeight: number;
 
   constructor() {
-      this.textureLoader = new THREE.TextureLoader();
-      this.textures = [];
-      this.textureSize = 16; // Default minecraft-like texture size
-      this.textureArrayWidth = 16;
-      this.textureArrayHeight = 16;
+    this.textureLoader = new THREE.TextureLoader();
+    this.textures = [];
+    this.textureSize = 16; // Default minecraft-like texture size
+    this.textureArrayWidth = 16;
+    this.textureArrayHeight = 16;
   }
 
   // Load a single texture and return a promise

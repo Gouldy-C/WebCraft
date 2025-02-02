@@ -22,11 +22,13 @@ export class MainScene extends THREE.Scene {
     this.inputManager = new InputManager(document.body);
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: false,
-      powerPreference: "high-performance"
+      antialias: true,
+      powerPreference: "high-performance",
+      alpha: true
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     domElement.appendChild(this.renderer.domElement);
