@@ -19,6 +19,7 @@ import fragmentShader from "../utils/shaders/basicFragShader.glsl?raw";
 import vertexShader from "../utils/shaders/basicVertexShader.glsl?raw";
 import { BitArray } from "../utils/classes/BitArray";
 import { FullScreenQuad } from "three/examples/jsm/Addons.js";
+import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 
 export interface TerrainGenParams {
   seed: string;
@@ -52,7 +53,6 @@ export class TerrainManager extends THREE.Object3D {
   hDrawDist: number;
   vDrawDist: number;
   currentChunk: THREE.Vector3;
-  // material: THREE.Material;
   shaderMaterial: THREE.ShaderMaterial;
 
   workerQueue: WorkerQueue<WorkerObj>;
@@ -61,7 +61,9 @@ export class TerrainManager extends THREE.Object3D {
   normal: number;
   cube: THREE.Mesh;
   geometry: THREE.BufferGeometry;
-  bufferGeoData: Float32Array
+  bufferGeoData: Float32Array;
+  textureArrayBuilder: TextureArrayBuilder;
+  blockId: number;
 
   constructor(world: World, playerPosition: THREE.Vector3) {
     super();
@@ -81,113 +83,52 @@ export class TerrainManager extends THREE.Object3D {
 
     this._getVisibleChunks();
 
-    // this.material = new THREE.MeshLambertMaterial({ color: "#33551c" });
-    const staticTexture = new THREE.TextureLoader().load(
-      "/textures/blocks/grass_side_carried.png"
-    );
-    staticTexture.minFilter = THREE.NearestFilter;
-    staticTexture.magFilter = THREE.NearestFilter;
-
     const texturePaths = [
-      "/textures/blocks/grass_carried.png",
-      "/textures/blocks/dirt.png",
-      "/textures/blocks/grass_side_carried.png",
+      [
+        "/textures/blocks/grass_carried.png",
+        "/textures/blocks/dirt.png",
+        "/textures/blocks/grass_side_carried.png",
+      ],
+      ["/textures/blocks/grass_top.png", "/textures/blocks/dirt.png", "/textures/blocks/grass_side_carried.png"],
+      ["/textures/blocks/stone.png"],
     ];
+
+    this.geometry = new THREE.BufferGeometry();
+    this.blockId = 2;
+    this.normal = 0;
 
     // vertexData(0): 9 unused bits | 2 uv | 3 normal | 6 z | 6 y | 6 x
     // blockData(1):  21 unused bits | 11 block id
     // blockData(2):  unused
-    this.geometry = new THREE.BufferGeometry();
-    const blockId = 0;
-    this.normal = 0;
-
     this.bufferGeoData = new Float32Array(18);
-    this.bufferGeoData[0] = 0 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (0 << 21);
-    this.bufferGeoData[1] = blockId << 0;
-    this.bufferGeoData[3] = 0 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
-    this.bufferGeoData[4] = blockId << 0;
-    this.bufferGeoData[6] = 5 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
-    this.bufferGeoData[7] = blockId << 0;
-    this.bufferGeoData[9] = 5 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
-    this.bufferGeoData[10] = blockId << 0;
-    this.bufferGeoData[12] = 0 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
-    this.bufferGeoData[13] = blockId << 0;
-    this.bufferGeoData[15] = 5 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (3 << 21);
-    this.bufferGeoData[16] = blockId << 0;
+    this.bufferGeoData[0] =
+      0 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (0 << 21);
+    this.bufferGeoData[1] = this.blockId << 0;
+    this.bufferGeoData[3] =
+      0 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
+    this.bufferGeoData[4] = this.blockId << 0;
+    this.bufferGeoData[6] =
+      1 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
+    this.bufferGeoData[7] = this.blockId << 0;
+    this.bufferGeoData[9] =
+      1 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
+    this.bufferGeoData[10] = this.blockId << 0;
+    this.bufferGeoData[12] =
+      0 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
+    this.bufferGeoData[13] = this.blockId << 0;
+    this.bufferGeoData[15] =
+      1 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (3 << 21);
+    this.bufferGeoData[16] = this.blockId << 0;
 
-    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.bufferGeoData, 3));
-
-    // Example configuration data: 3 blocks, each with RG values (numTextures, startIndex)
-    const textureConfigData = new Uint8Array([
-      3,
-      0, // Block 0: 3 textures starting at index 0
-      1,
-      3, // Block 1: 1 texture starting at index 3
-      3,
-      4, // Block 2: 2 textures starting at index 4
-      1,
-      7, // Block 3: 1 texture starting at index 7
-    ]);
-    const textureConfig = new THREE.DataTexture(
-      textureConfigData,
-      textureConfigData.length / 2, // Number of blocks
-      1, // Height
-      THREE.RGFormat,
-      THREE.UnsignedByteType
+    this.geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(this.bufferGeoData, 3)
     );
-    textureConfig.needsUpdate = true;
 
-    // Load textures and handle asynchrony
-    const loader = new THREE.TextureLoader();
-    const loadTexture = (path: string) => {
-      return new Promise((resolve, reject) => {
-        loader.load(path, resolve, undefined, reject);
-      });
-    };
-
-    Promise.all(texturePaths.map(loadTexture)).then((textures) => {
-      // Create a single buffer for all texture data
-      const buffer = new Uint8Array(textures.length * 16 * 16 * 4);
-
-      textures.forEach((value, index) => {
-        // Get pixel data from texture
-        const texture = value as THREE.Texture;
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = 16;
-        canvas.height = 16;
-        if (!ctx) throw new Error("Failed to get canvas context");
-        ctx.drawImage(texture.image, 0, 0);
-        const imageData = ctx.getImageData(0, 0, 16, 16);
-
-        // Copy into main buffer
-        buffer.set(new Uint8Array(imageData.data), index * 16 * 16 * 4);
-      });
-
-      // Create texture array with pre-populated data
-      const textureArray = new THREE.DataArrayTexture(
-        buffer,
-        16, // width
-        16, // height
-        textures.length // depth
-      );
-
-      textureArray.minFilter = THREE.NearestFilter;
-      textureArray.magFilter = THREE.NearestFilter;
-      textureArray.needsUpdate = true;
-
-      // Create shader material with the correct uniform
-      this.shaderMaterial.uniforms = {
-        uTextureArray: { value: textureArray },
-        uTextureConfig: { value: textureConfig },
-        blockTexture: { value: staticTexture },
-      };
-      this.shaderMaterial.glslVersion = THREE.GLSL3;
-      this.shaderMaterial.vertexShader = V_SHADER;
-      this.shaderMaterial.fragmentShader = F_SHADER;
-
-      this.shaderMaterial.needsUpdate = true;
-    });
+    this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16);
+    this.textureArrayBuilder.setTextures(1, texturePaths[0]);
+    this.textureArrayBuilder.setTextures(2, texturePaths[1]);
+    this.textureArrayBuilder.setTextures(3, texturePaths[2]);
 
     this.cube = new THREE.Mesh(this.geometry, this.shaderMaterial);
     this.add(this.cube);
@@ -203,22 +144,44 @@ export class TerrainManager extends THREE.Object3D {
   update(playerPosition: THREE.Vector3) {
     this.workerQueue.update();
 
-    this.normal += 0.01
-    if (this.normal > 3) this.normal = 0
-    this.bufferGeoData[0] = 0 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (0 << 21);
-    this.bufferGeoData[1] = 0 << 0;
-    this.bufferGeoData[3] = 0 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
-    this.bufferGeoData[4] = 0 << 0;
-    this.bufferGeoData[6] = 5 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
-    this.bufferGeoData[7] = 0 << 0;
-    this.bufferGeoData[9] = 5 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
-    this.bufferGeoData[10] = 0 << 0;
-    this.bufferGeoData[12] = 0 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
-    this.bufferGeoData[13] = 0 << 0;
-    this.bufferGeoData[15] = 5 | (0 << 6) | (5 << 12) | (Math.floor(this.normal) << 18) | (3 << 21);
-    this.bufferGeoData[16] = 0 << 0;
-    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.bufferGeoData, 3));
-    console.log(this.normal);
+    const { textureArray, textureArrayConfig } = this.textureArrayBuilder.getTextureArray();
+
+    if (textureArray && textureArrayConfig) {
+      this.shaderMaterial.uniforms = {
+        uTextureArray: { value: textureArray },
+        uTextureConfig: { value: textureArrayConfig },
+      };
+
+      this.shaderMaterial.glslVersion = THREE.GLSL3;
+      this.shaderMaterial.vertexShader = V_SHADER;
+      this.shaderMaterial.fragmentShader = F_SHADER;
+      this.shaderMaterial.needsUpdate = true;
+    }
+
+    this.normal += 0.01;
+    if (this.normal > 3) this.normal = 0;
+    this.bufferGeoData[0] =
+      0 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (0 << 21);
+    this.bufferGeoData[1] = this.blockId << 0;
+    this.bufferGeoData[3] =
+      0 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
+    this.bufferGeoData[4] = this.blockId << 0;
+    this.bufferGeoData[6] =
+      1 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
+    this.bufferGeoData[7] = this.blockId << 0;
+    this.bufferGeoData[9] =
+      1 | (0 << 6) | (0 << 12) | (Math.floor(this.normal) << 18) | (2 << 21);
+    this.bufferGeoData[10] = this.blockId << 0;
+    this.bufferGeoData[12] =
+      0 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (1 << 21);
+    this.bufferGeoData[13] = this.blockId << 0;
+    this.bufferGeoData[15] =
+      1 | (0 << 6) | (1 << 12) | (Math.floor(this.normal) << 18) | (3 << 21);
+    this.bufferGeoData[16] = this.blockId << 0;
+    this.geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(this.bufferGeoData, 3)
+    );
 
     const chunkCoords = worldToChunkCoords(
       playerPosition.x,

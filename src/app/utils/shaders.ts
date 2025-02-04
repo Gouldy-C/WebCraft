@@ -76,9 +76,6 @@ void main() {
   vertexUV = getUVCoords(UVIndex);
   textureIndex = getTextureIndex(blockId, vertexNormal);
 
-  float uvX = blockId / float(textureSize(uTextureConfig, 0).x);
-  vec2 blockInfo = texture(uTextureConfig, vec2(uvX, 0.0)).rg;
-
   vec3 pos = vec3(x, y, z);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
@@ -87,7 +84,6 @@ void main() {
 
 export const F_SHADER = `
 uniform sampler2DArray uTextureArray;
-uniform sampler2D blockTexture;
 
 varying vec3 vertexNormal;
 varying vec2 vertexUV;
