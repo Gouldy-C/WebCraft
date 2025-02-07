@@ -17,7 +17,7 @@ vec3 decodeNormal(uint normalBits) {
   }
 }
 
-vec2 getUVCoords(uint UVBits) {
+vec2 decodeUVCoords(uint UVBits) {
   switch(UVBits) {
     case 0u: return vec2(0.0, 0.0);
     case 1u: return vec2(0.0, 1.0);
@@ -42,16 +42,20 @@ float getTextureIndex(float blockId, vec3 normal) {
   bool isFront = normal.z > 0.99;
   bool isBack = normal.z < -0.99;
 
-  // 6-texture blocks (all faces unique)
   if (numTextures >= 6.0) {
     if (isTop) return startIndex;
     if (isBottom) return startIndex + 1.0;
-    if (isRight) return startIndex + 2.0;
-    if (isLeft) return startIndex + 3.0;
-    if (isFront) return startIndex + 4.0;
-    if (isBack) return startIndex + 5.0;
+    if (isFront) return startIndex + 2.0;
+    if (isBack) return startIndex + 3.0;
+    if (isRight) return startIndex + 4.0;
+    if (isLeft) return startIndex + 5.0;
   }
-  // 3-texture blocks (top/bottom/sides)
+  else if (numTextures >= 4.0) {
+    if (isTop) return startIndex;
+    if (isBottom) return startIndex + 1.0;
+    if (isFront) return startIndex + 2.0; 
+    return startIndex + 3.0;
+  }
   else if (numTextures >= 3.0) {
     if (isTop) return startIndex;
     if (isBottom) return startIndex + 1.0;
@@ -73,7 +77,7 @@ void main() {
   float blockId = float(uint(position.y) & 0xFFFu);
   
   vertexNormal = decodeNormal(normalIndex);
-  vertexUV = getUVCoords(UVIndex);
+  vertexUV = decodeUVCoords(UVIndex);
   textureIndex = getTextureIndex(blockId, vertexNormal);
 
   vec3 pos = vec3(x, y, z);

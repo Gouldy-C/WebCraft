@@ -5,14 +5,7 @@ export type Block = BasicBlock | Resource
 export interface BasicBlock {
   id: number;
   name: string;
-  textures: {
-    top: string;
-    bottom: string;
-    left: string;
-    right: string;
-    front: string;
-    back: string;
-  };
+  textures: string[];
   transparent: boolean
   material?: THREE.Material[] | THREE.Material
 }
@@ -26,92 +19,47 @@ export const BLOCKS: Record<string, Block> = {
     id: 0,
     name: 'air',
     transparent: true,
-    textures: {
-      top: 'air',
-      bottom: 'air',
-      left: 'air',
-      right: 'air',
-      front: 'air',
-      back: 'air',
-    }
+    textures: ['/textures/blocks/missing_tile.png']
   },
   bedrock: {
     id: 1,
     name: 'bedrock',
     transparent: false,
-    textures: {
-      top: 'bedrock',
-      bottom: 'bedrock',
-      left: 'bedrock',
-      right: 'bedrock',
-      front: 'bedrock',
-      back: 'bedrock',
-    },
+    textures: ['/textures/blocks/bedrock.png'],
   },
   cloud: {
     id: 2,
     name: 'cloud',
     transparent: true,
-    textures: {
-      top: 'cloud',
-      bottom: 'cloud',
-      left: 'cloud',
-      right: 'cloud',
-      front: 'cloud',
-      back: 'cloud',
-    },
+    textures: ['/textures/environment/clouds.png'],
   },
   grass: {
     id: 3,
     name: 'grass',
     transparent: false,
-    textures: {
-      top: 'grass_top',
-      bottom: 'dirt',
-      left: 'grass_side',
-      right: 'grass_side',
-      front: 'grass_side',
-      back: 'grass_side',
-    },
+    textures: [
+      '/textures/blocks/grass_carried.png',
+      '/textures/blocks/dirt.png',
+      '/textures/blocks/grass_side_carried.png',
+    ],
   },
   dirt: {
     id: 4,
     name: 'dirt',
     transparent: false,
-    textures: {
-      top: 'dirt',
-      bottom: 'dirt',
-      left: 'dirt',
-      right: 'dirt',
-      front: 'dirt',
-      back: 'dirt',
-    },
+    textures: ['/textures/blocks/dirt.png'],
   },
   sand: {
     id: 5,
     name: 'sand',
     transparent: false,
-    textures: {
-      top: 'sand',
-      bottom: 'sand',
-      left: 'sand',
-      right: 'sand',
-      front: 'sand',
-      back: 'sand',
-    },
+    textures: ['/textures/blocks/sand.png'],
   },
   stone: {
     id: 6,
     name: 'stone',
     transparent: false,
-    textures: {
-      top: 'stone',
-      bottom: 'stone',
-      left: 'stone',
-      right: 'stone',
-      front: 'stone',
-      back: 'stone',
-    },
+    textures: ['/textures/blocks/stone.png'],
     scale: { x: 30, y: 30, z: 30 },
     scarcity: 0.8,
   },
@@ -119,40 +67,19 @@ export const BLOCKS: Record<string, Block> = {
     id: 7,
     name: 'water',
     transparent: true,
-    textures: {
-      top: 'water',
-      bottom: 'water',
-      left: 'water',
-      right: 'water',
-      front: 'water',
-      back: 'water',
-    },
+    textures: ['/public/textures/blocks/water_placeholder.png'],
   },
   cobblestone: {
     id: 8,
     name: 'cobblestone',
     transparent: false,
-    textures: {
-      top: 'cobblestone',
-      bottom: 'cobblestone',
-      left: 'cobblestone',
-      right: 'cobblestone',
-      front: 'cobblestone',
-      back: 'cobblestone',
-    }
+    textures: ['/textures/blocks/cobblestone.png'],
   },
   coal_ore: {
     id: 9,
     name: 'coalOre',
     transparent: false,
-    textures: {
-      top: 'coal_ore',
-      bottom: 'coal_ore',
-      left: 'coal_ore',
-      right: 'coal_ore',
-      front: 'coal_ore',
-      back: 'coal_ore',
-    },
+    textures: ['/textures/blocks/coal_ore.png'],
     scale: { x: 20, y: 20, z: 20 },
     scarcity: 0.8,
   },
@@ -160,14 +87,7 @@ export const BLOCKS: Record<string, Block> = {
     id: 10,
     name: 'ironOre',
     transparent: false,
-    textures: {
-      top: 'iron_ore',
-      bottom: 'iron_ore',
-      left: 'iron_ore',
-      right: 'iron_ore',
-      front: 'iron_ore',
-      back: 'iron_ore',
-    },
+    textures: ['/textures/blocks/iron_ore.png'],
     scale: { x: 40, y: 40, z: 40 },
     scarcity: 0.9,
   },
@@ -175,53 +95,34 @@ export const BLOCKS: Record<string, Block> = {
     id: 11,
     name: 'snow_dirt',
     transparent: false,
-    textures: {
-      top: 'snow',
-      bottom: 'snow_dirt_side',
-      left: 'snow_dirt_side',
-      right: 'snow_dirt_side',
-      front: 'snow_dirt_side',
-      back: 'snow_dirt_side',
-    },
+    textures: [
+      '/textures/blocks/snow.png',
+      '/textures/blocks/dirt.png',
+      '/textures/blocks/grass_side_snowed.png',
+    ],
   },
   snow: {
     id: 12,
     name: 'snow',
     transparent: false,
-    textures: {
-      top: 'snow',
-      bottom: 'snow',
-      left: 'snow',
-      right: 'snow',
-      front: 'snow',
-      back: 'snow',
-    },
+    textures: ['/textures/blocks/snow.png'],
   },
   oak_log: {
     id: 13,
     name: 'oak_log',
     transparent: false,
-    textures: {
-      top: 'log_oak_top',
-      bottom: 'log_oak_top',
-      left: 'log_oak',
-      right: 'log_oak',
-      front: 'log_oak',
-      back: 'log_oak',
-    }
+    textures: [
+      '/textures/blocks/log_oak_top.png',
+      '/textures/blocks/log_oak_top.png',
+      '/textures/blocks/log_oak.png',
+
+    ]
   },
   oak_leaves: {
     id: 14,
     name: 'oak_leaves',
     transparent: false,
-    textures: {
-      top: 'oak_leaves',
-      bottom: 'oak_leaves',
-      left: 'oak_leaves',
-      right: 'oak_leaves',
-      front: 'oak_leaves',
-      back: 'oak_leaves',
-    }
+    textures: ['/textures/blocks/leaves_oak_carried.tga'],
   },
   
 

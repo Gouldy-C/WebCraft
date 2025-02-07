@@ -1,6 +1,5 @@
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
 import * as THREE from 'three';
-import { color } from 'three/webgpu';
 
 
 export class TextureArrayBuilder {
@@ -22,6 +21,8 @@ export class TextureArrayBuilder {
   width: number
   height: number
 
+  private loadingPromises: Promise<void>[] = [];
+
   constructor(textureArrayName: string, width: number, height: number) {
     this.textureArrayName = textureArrayName
     this.width = width;
@@ -31,33 +32,45 @@ export class TextureArrayBuilder {
   }
 
   setTextures(key: number, texturesUrls: string[], colorMasks?: number[][]) {
-    this.texturesloaded = false
-    this.textureArrayNeedsUpdate = true
+    this.texturesloaded = false;
+    this.textureArrayNeedsUpdate = true;
     this.disposeTextures(key);
     this.texturesMap.set(key, []);
     const textures = this.texturesMap.get(key);
     if (!textures) return;
-    for (let i = 0; i < texturesUrls.length; i++) {
-      textures.push(undefined);
-    }
-    texturesUrls.forEach((url, index) => {
-      textures[index] = null;
-      const {loader, type} = this._useCorrectLoader(url);
-      loader.load(url, (texture) => {
-        texture.userData = {
-          type: type,
-          colorMask: colorMasks ? colorMasks[index] : [0.0, 0.0, 0.0, 1.0] // [r, g, b, a]  
-        }
-        this._assignTexture(key, index, texture);
-      },
-      undefined,
-      (error) => {
-        console.error(`Error loading ${type} texture: `, error, ' from ', url);
-      })
+
+    const promises = texturesUrls.map((url, index) => {
+      return new Promise<void>((resolve, reject) => {
+        const { loader, type } = this._useCorrectLoader(url);
+        loader.load(
+          url,
+          (texture) => {
+            texture.userData = {
+              type: type,
+              colorMask: colorMasks ? colorMasks[index] : [0.0, 0.0, 0.0, 1.0],
+            };
+            this._assignTexture(key, index, texture);
+            resolve();
+          },
+          undefined,
+          (error) => {
+            console.error(`Error loading ${type} texture: `, error, ' from ', url);
+            reject(error);
+          }
+        );
+      });
     });
+
+    this.loadingPromises.push(...promises);
   }
 
-  getTextureArray() {
+  async getTextureArray(): Promise<{
+    textureArray: THREE.DataArrayTexture | null;
+    textureArrayConfig: THREE.DataTexture | null;
+  }> {
+    await Promise.all(this.loadingPromises);
+    this.loadingPromises = [];
+
     if (this.textureArrayNeedsUpdate) {
       this.textureArray?.dispose();
       this.textureArrayConfig?.dispose();
@@ -66,9 +79,10 @@ export class TextureArrayBuilder {
       const res = this._buildTextureArray();
       if (res) this.textureArrayNeedsUpdate = false;
     }
+
     return {
       textureArray: this.textureArray,
-      textureArrayConfig: this.textureArrayConfig
+      textureArrayConfig: this.textureArrayConfig,
     };
   }
 
@@ -77,13 +91,13 @@ export class TextureArrayBuilder {
       return false;
     }
 
-    const rawTextureArray = new Uint8Array((this.numberTextures + 1) * this.width * this.height * 4);
-    const sortedKeys = Array.from(this.texturesMap.keys()).sort((a, b) => a - b);
-    const rawTextureConfig = new Uint8Array((sortedKeys.length + 1) * 2);
+    const rawTextureArray = new Uint8Array(this.numberTextures * this.width * this.height * 4);
+    const keys = Array.from(this.texturesMap.keys())
+    const rawTextureConfig = new Uint8Array((Math.max(...keys) + 1) * 2);
 
-    let textureIndex = sortedKeys[0];
+    let textureIndex = 0;
 
-    for (const [i, key] of sortedKeys.entries()) {
+    for (const key of keys) {
       const textures = this.texturesMap.get(key);
       if (!textures || textures.length === 0) continue;
 
@@ -117,7 +131,7 @@ export class TextureArrayBuilder {
       }
       rawTextureConfig.set([count, startIndex], key * 2);
     }
-    this.textureArray = new THREE.DataArrayTexture(rawTextureArray, this.width, this.height, this.numberTextures + 1);
+    this.textureArray = new THREE.DataArrayTexture(rawTextureArray, this.width, this.height, this.numberTextures);
     this.textureArray.minFilter = THREE.NearestFilter;
     this.textureArray.magFilter = THREE.NearestFilter;
     this.textureArray.name = this.textureArrayName;

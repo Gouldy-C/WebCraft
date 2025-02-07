@@ -118,7 +118,7 @@ export class Chunk {
 
   private _processMeshData(meshDataBuffer: ArrayBuffer) {
     if (!this.mesh) {
-      this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.material)
+      this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.shaderMaterial)
       this.mesh.position.set(this.position.x, this.position.y, this.position.z)
       this.terrainManager.add(this.mesh)
     }
