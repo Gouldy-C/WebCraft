@@ -1,4 +1,7 @@
 export const V_SHADER = `
+// position(x): 9 unused bits | 2 bit uv | 3 bit normal | 6 bit z | 6 bit y | 6 bit x
+// position(y):  21 unused bits | 11 bit block id
+// position(z):  unused
 uniform sampler2D uTextureConfig; // X: numTextures per Block, Y: startIndex in the texture array
 
 varying vec3 vertexNormal;

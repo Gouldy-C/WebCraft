@@ -21,7 +21,7 @@ export const defaultWorldStore: WorldStore = {
   terrain: {
     chunkSize: 64,
     maxWorldHeight: 256,
-    hDrawDist: 6,
+    hDrawDist: 5,
     vDrawDist: 2,
     seed: "default",
     fractalNoise: {
@@ -80,7 +80,7 @@ export class World extends THREE.Group {
     this.params = params;
     this.worldStore = new DataStore(params);
 
-    this.terrain = new TerrainManager(this, new THREE.Vector3(0, 0, 0));
+    this.terrain = new TerrainManager(this);
     this.add(this.terrain);
 
     this.orbitCamera = new THREE.PerspectiveCamera(

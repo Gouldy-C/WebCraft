@@ -27,14 +27,8 @@ export const BLOCKS: Record<string, Block> = {
     transparent: false,
     textures: ['/textures/blocks/bedrock.png'],
   },
-  cloud: {
-    id: 2,
-    name: 'cloud',
-    transparent: true,
-    textures: ['/textures/environment/clouds.png'],
-  },
   grass: {
-    id: 3,
+    id: 2,
     name: 'grass',
     transparent: false,
     textures: [
@@ -44,10 +38,18 @@ export const BLOCKS: Record<string, Block> = {
     ],
   },
   dirt: {
-    id: 4,
+    id: 3,
     name: 'dirt',
     transparent: false,
     textures: ['/textures/blocks/dirt.png'],
+  },
+  stone: {
+    id: 4,
+    name: 'stone',
+    transparent: false,
+    textures: ['/textures/blocks/stone.png'],
+    scale: { x: 30, y: 30, z: 30 },
+    scarcity: 0.8,
   },
   sand: {
     id: 5,
@@ -55,28 +57,20 @@ export const BLOCKS: Record<string, Block> = {
     transparent: false,
     textures: ['/textures/blocks/sand.png'],
   },
-  stone: {
-    id: 6,
-    name: 'stone',
-    transparent: false,
-    textures: ['/textures/blocks/stone.png'],
-    scale: { x: 30, y: 30, z: 30 },
-    scarcity: 0.8,
-  },
   water: {
-    id: 7,
+    id: 6,
     name: 'water',
     transparent: true,
-    textures: ['/public/textures/blocks/water_placeholder.png'],
+    textures: ['/textures/blocks/water_placeholder.png'],
   },
   cobblestone: {
-    id: 8,
+    id: 7,
     name: 'cobblestone',
     transparent: false,
     textures: ['/textures/blocks/cobblestone.png'],
   },
   coal_ore: {
-    id: 9,
+    id: 8,
     name: 'coalOre',
     transparent: false,
     textures: ['/textures/blocks/coal_ore.png'],
@@ -84,7 +78,7 @@ export const BLOCKS: Record<string, Block> = {
     scarcity: 0.8,
   },
   iron_ore: {
-    id: 10,
+    id: 9,
     name: 'ironOre',
     transparent: false,
     textures: ['/textures/blocks/iron_ore.png'],
@@ -92,7 +86,7 @@ export const BLOCKS: Record<string, Block> = {
     scarcity: 0.9,
   },
   snow_dirt: {
-    id: 11,
+    id: 10,
     name: 'snow_dirt',
     transparent: false,
     textures: [
@@ -102,26 +96,25 @@ export const BLOCKS: Record<string, Block> = {
     ],
   },
   snow: {
-    id: 12,
+    id: 11,
     name: 'snow',
     transparent: false,
     textures: ['/textures/blocks/snow.png'],
   },
   oak_log: {
-    id: 13,
+    id: 12,
     name: 'oak_log',
     transparent: false,
     textures: [
       '/textures/blocks/log_oak_top.png',
       '/textures/blocks/log_oak_top.png',
       '/textures/blocks/log_oak.png',
-
     ]
   },
   oak_leaves: {
-    id: 14,
+    id: 13,
     name: 'oak_leaves',
-    transparent: false,
+    transparent: true,
     textures: ['/textures/blocks/leaves_oak_carried.tga'],
   },
   

@@ -3,18 +3,15 @@ import { BitArray } from '../utils/classes/BitArray'
 import { TerrainGenParams, TerrainManager } from './TerrainManager'
 import { World } from './World'
 import { WorkerObj } from '../utils/classes/WorkerQueue'
-import { indexFromXYZCoords } from '../utils/generalUtils'
+import { coordsXYZFromKey, indexFromXYZCoords } from '../utils/generalUtils'
 
-export interface ChunkParams {
-  id: string
-  position: THREE.Vector3
-  lod: number
-}
+
 
 export class Chunk {
   // Params
   id: string
-  position: THREE.Vector3
+  chunkCoords: { x: number; y: number; z: number }
+  worldPosition: { x: number; y: number; z: number }
   size: number
   terrainGenParams: TerrainGenParams
   // lod: number
@@ -31,14 +28,24 @@ export class Chunk {
   blockData: Uint16Array
   mesh: THREE.Mesh | null = null
 
-  constructor(terrainManager: TerrainManager, params: ChunkParams) {
+  // vertexData(x): 9 unused bits | 2 uv | 3 normal | 6 z | 6 y | 6 x
+  // (0 << 21) | (this.normal << 18) | (0 << 12)| (0 << 6) | 0
+  // blockData(y):  21 unused bits | 11 block id
+  // blockData(z):  unused
+
+  constructor(terrainManager: TerrainManager, id: string) {
     this.terrainManager = terrainManager
     this.world = terrainManager.world
 
-    this.id = params.id
-    this.position = params.position
+    this.id = id
+    this.chunkCoords = coordsXYZFromKey(this.id)
     this.terrainGenParams = this.terrainManager.params
     this.size = this.terrainGenParams.chunkSize
+    this.worldPosition = { 
+      x: this.chunkCoords.x * this.size,
+      y: this.chunkCoords.y * this.size,
+      z: this.chunkCoords.z * this.size
+    }
     // this.lod = params.lod
 
     this.binaryData = []
@@ -66,13 +73,29 @@ export class Chunk {
     this._disposeMesh()
     this.binaryData = []
     this.blockData = new Uint16Array(this.size * this.size * this.size)
-    this.position = new THREE.Vector3(0, 0, 0)
+    this.chunkCoords = { x: 0, y: 0, z: 0 }
+    this.worldPosition = { x: 0, y: 0, z: 0 }
     this.id = ""
   }
 
-  reuseChunk(params: ChunkParams) {
-    this.id = params.id
-    this.position = params.position
+  reuseChunk(terrainManager: TerrainManager, id: string) {
+    this.terrainManager = terrainManager
+    this.world = terrainManager.world
+
+    this.id = id
+    this.chunkCoords = coordsXYZFromKey(this.id)
+    this.terrainGenParams = this.terrainManager.params
+    this.size = this.terrainGenParams.chunkSize
+    this.worldPosition = { 
+      x: this.chunkCoords.x * this.size,
+      y: this.chunkCoords.y * this.size,
+      z: this.chunkCoords.z * this.size
+    }
+    // this.lod = params.lod
+
+    this.binaryData = []
+    this.blockData = new Uint16Array(this.size * this.size * this.size)
+
     this._generateVoxelData()
   }
 
@@ -119,11 +142,11 @@ export class Chunk {
   private _processMeshData(meshDataBuffer: ArrayBuffer) {
     if (!this.mesh) {
       this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.shaderMaterial)
-      this.mesh.position.set(this.position.x, this.position.y, this.position.z)
       this.terrainManager.add(this.mesh)
     }
     const meshData = new Uint32Array(meshDataBuffer);
     const bufferAttribute = new THREE.BufferAttribute(meshData, 2)
+    this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
     this.mesh.geometry.setAttribute('voxleVertexData', bufferAttribute)
     this.mesh.geometry.computeBoundingSphere()
   }

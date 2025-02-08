@@ -31,7 +31,7 @@ export class TextureArrayBuilder {
     this.canvas.height = this.height;
   }
 
-  setTextures(key: number, texturesUrls: string[], colorMasks?: number[][]) {
+  setTextures(key: number, texturesUrls: string[], colorMasks?: (number[] | null)[]) {
     this.texturesloaded = false;
     this.textureArrayNeedsUpdate = true;
     this.disposeTextures(key);
@@ -47,7 +47,7 @@ export class TextureArrayBuilder {
           (texture) => {
             texture.userData = {
               type: type,
-              colorMask: colorMasks ? colorMasks[index] : [0.0, 0.0, 0.0, 1.0],
+              colorMask: colorMasks ? colorMasks[index] : null,
             };
             this._assignTexture(key, index, texture);
             resolve();
@@ -91,9 +91,9 @@ export class TextureArrayBuilder {
       return false;
     }
 
-    const rawTextureArray = new Uint8Array(this.numberTextures * this.width * this.height * 4);
+    const rawTextureArray = []
     const keys = Array.from(this.texturesMap.keys())
-    const rawTextureConfig = new Uint8Array((Math.max(...keys) + 1) * 2);
+    const rawTextureConfig = []
 
     let textureIndex = 0;
 
@@ -111,33 +111,35 @@ export class TextureArrayBuilder {
         const ctx = this.canvas.getContext("2d");
 
         if (!ctx) throw new Error(`Canvas context not available textureArray: ${this.textureArrayName}`);
-
-        if (colorMask[0] || colorMask[1] || colorMask[2]) {
+        
+        if (colorMask) {
           ctx.fillStyle = `rgba(${colorMask[0]}, ${colorMask[1]}, ${colorMask[2]}, ${colorMask[3]})`;
           ctx.fillRect(0, 0, this.width, this.height);
-
           ctx.globalCompositeOperation = 'multiply';
-          ctx.drawImage(texture.image, 0, 0);
-
-          ctx.globalCompositeOperation = 'source-over';
+        }
+        
+        if (texture.userData.type === 'tga') {
+          const imageData = ctx.createImageData(texture.image.width, texture.image.height);
+          imageData.data.set(texture.image.data);
+          ctx.putImageData(imageData, 0, 0);
         }
         else ctx.drawImage(texture.image, 0, 0);
         
         const imageData = ctx.getImageData(0, 0, this.width, this.height);
-        rawTextureArray.set(new Uint8Array(imageData.data), textureIndex * this.width * this.height * 4);
+        rawTextureArray.push(...imageData.data);
         ctx.clearRect(0, 0, this.width, this.height);
 
         textureIndex++;
       }
-      rawTextureConfig.set([count, startIndex], key * 2);
+      rawTextureConfig.push(count, startIndex)
     }
-    this.textureArray = new THREE.DataArrayTexture(rawTextureArray, this.width, this.height, this.numberTextures);
+    this.textureArray = new THREE.DataArrayTexture(new Uint8Array(rawTextureArray), this.width, this.height, this.numberTextures);
     this.textureArray.minFilter = THREE.NearestFilter;
     this.textureArray.magFilter = THREE.NearestFilter;
     this.textureArray.name = this.textureArrayName;
     this.textureArray.needsUpdate = true;
 
-    this.textureArrayConfig = new THREE.DataTexture(rawTextureConfig, rawTextureConfig.length / 2, 1, THREE.RGFormat, THREE.UnsignedByteType);
+    this.textureArrayConfig = new THREE.DataTexture(new Uint8Array(rawTextureConfig), rawTextureConfig.length / 2, 1, THREE.RGFormat, THREE.UnsignedByteType);
     this.textureArrayConfig.name = this.textureArrayName;
     this.textureArrayConfig.needsUpdate = true;
 

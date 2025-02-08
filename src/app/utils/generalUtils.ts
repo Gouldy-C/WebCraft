@@ -180,7 +180,7 @@ export const SecureStorage = {
 };
 
 export function spiralChunkKeys(
-  startCoords: THREE.Vector3,
+  startCoords: { x: number; y: number; z: number },
   hDrawDist: number,
   vDrawDist: number,
   vertChunks: number

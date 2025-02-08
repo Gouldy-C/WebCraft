@@ -54,7 +54,7 @@ export class VoxelGenXYZ {
   }
 
   _getSurfaceHeightXZ(x: number, z: number) {
-    const height = this.params.worldHeight;
+    const height = this.params.maxWorldHeight;
     const noiseValue = this.fractalNoise.fractal2D(x, z);
     const heightValue = (noiseValue + 1) / 2;
     const blockHeight = Math.floor(heightValue * height);
