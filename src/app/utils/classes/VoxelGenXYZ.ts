@@ -34,97 +34,13 @@ export class VoxelGenXYZ {
     this.resources = this._generateResources(params);
   }
 
-  getBlockIdXYZ(x: number, y: number, z: number) {
-    const heights = this.getHeightsXZ(x, z);
+  
 
-    const terrain = this._getTerrainXYZ(x, y, z, heights);
-    if (terrain) return terrain;
+  
 
-    return BLOCKS.air.id;
-  }
+  
 
-  getHeightsXZ(x: number, z: number) {
-    let heights = this.heights[keyFromXZCoords(x, z)]
-    if (heights) {
-      return heights;
-    }
-    heights = this._getSurfaceHeightXZ(x, z);
-    this.heights[keyFromXZCoords(x, z)] = heights
-    return heights;
-  }
-
-  _getSurfaceHeightXZ(x: number, z: number) {
-    const height = this.params.maxWorldHeight;
-    const noiseValue = this.fractalNoise.fractal2D(x, z);
-    const heightValue = (noiseValue + 1) / 2;
-    const blockHeight = Math.floor(heightValue * height);
-    const surfaceHeight = clamp(blockHeight, 0, height - 1);
-    return { surfaceHeight, heightValue };
-  }
-
-  _getTerrainXYZ(
-    x: number,
-    y: number,
-    z: number,
-    heights?: { surfaceHeight: number; heightValue: number }
-  ) {
-    const { surfaceHeight, heightValue } =
-      heights || this.getHeightsXZ(x, z);
-    if (y > surfaceHeight) return BLOCKS.air.id;
-
-    const isBedrock = y <= (Math.random() > 0.5 ? 0 : 1);
-    const resource = this._getResourceXYZ(x, y, z, heights!);
-
-    if (resource && y <= surfaceHeight) return resource;
-    if (y === surfaceHeight) return BLOCKS.grass.id;
-    if (isBedrock) return BLOCKS.bedrock.id;
-    if (y < surfaceHeight && y > heightValue - Math.random() * 0.1)
-      return BLOCKS.dirt.id;
-    if (y < surfaceHeight) return BLOCKS.stone.id;
-
-    return BLOCKS.air.id;
-  }
-
-  _getResourceXYZ(
-    x: number,
-    y: number,
-    z: number,
-    heights: { surfaceHeight: number; heightValue: number }
-  ) {
-    if (y > heights.surfaceHeight) return BLOCKS.air.id;
-
-    for (let i = 0; i < this.resources.length; i++) {
-      const resource = this.resources[i];
-      const scaleY = resource.scaleY;
-      const scaleZ = resource.scaleZ;
-      const scaleX = resource.scaleX;
-      const scarcity = resource.scarcity;
-
-      const yS = y / scaleY;
-      const zS = z / scaleZ;
-      const xS = x / scaleX;
-
-      const value = resource.noise3D(xS, yS, zS);
-
-      if (value > scarcity) {
-        return resource.resource.id;
-      }
-    }
-    return BLOCKS.air.id;
-  }
-
-  _generateResources(params: TerrainGenParams) {
-    return RESOURCES.map((resource) => {
-      return {
-        noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
-        resource,
-        scaleX: resource.scale.x,
-        scaleY: resource.scale.y,
-        scaleZ: resource.scale.z,
-        scarcity: resource.scarcity,
-      };
-    });
-  }
+  
 
   // isTreeAtXYZ(
   //   x: number,
