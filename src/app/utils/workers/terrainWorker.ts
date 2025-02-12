@@ -23,10 +23,11 @@ export interface RequestGeometryData {
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "genChunkVoxelData") {
-    measureTime(() => genVoxelData(e.data), "processChunk");
+    // measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
+    genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    measureTime(() => genMeshData(e.data), "processGeometry");
+    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
   }
 };
 
@@ -55,7 +56,7 @@ function genVoxelData(message: WorkerPostMessage) {
     binaryData.push(new BitArray(size))
   }
 
-  // 1-4 ms pretty fast
+  // 1-6 ms pretty fast, rarely up to 20ms
   for (let z = 0; z < size; z++) {
     for (let x = 0; x < size; x++) {
       const sampleX = Math.floor(x / sampleRate) * sampleRate;
@@ -99,6 +100,7 @@ function genVoxelData(message: WorkerPostMessage) {
   }
 
   let solidExternal = [true, true, true, true, true, true];
+
   for (let z = 0; z < size; z++) {
     const zOffset = z * size;
     const wzCol = wCoords.z + z;
@@ -135,7 +137,10 @@ function genVoxelData(message: WorkerPostMessage) {
     }
   }
 
-  const binaryDataBuffer = BitArray.getBufferFromBitArrays(binaryData)
+  let binaryDataBuffer: ArrayBuffer;
+  measureTime(() => {
+    binaryDataBuffer = BitArray.getBufferFromBitArrays(binaryData)
+  });
 
   const returnData: WorkerPostMessage = {
     id: message.id,
