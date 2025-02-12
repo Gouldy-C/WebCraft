@@ -15,7 +15,7 @@ export interface ResourceGenerator {
   scarcity: number;
 }
 
-export function checkForHeight(
+export function terrainHeight(
   pos: { x: number; z: number},
   heightMap: Uint8Array,
   params: TerrainGenParams,
@@ -32,7 +32,7 @@ export function checkForHeight(
   return value
 }
 
-export function checkForDirtHeight(
+export function dirtDepth(
   pos: { x: number; z: number},
   maxDirtDepth: number,
   dirtDepthMap: Uint8Array,
@@ -53,15 +53,15 @@ export function checkForDirtHeight(
 export function getTerrainXYZ(
   pos: {x: number, y: number, z: number},
   terrainHeight: number,
-  resources: ResourceGenerator[],
-  dirtDepth: number
+  dirtDepth: number,
+  params: TerrainGenParams,
 ) {
   if (pos.y > terrainHeight) return BLOCKS.air.id;
 
   // const resource = getResourceXYZ({x: pos.x, y: pos.y, z: pos.z}, resources);
-
   // if (resource && pos.y <= terrainHeight) return resource;
-  if (pos.y === terrainHeight && pos.y < 160) return BLOCKS.grass.id;
+
+  if (pos.y === terrainHeight && pos.y < 200) return BLOCKS.grass.id;
   if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth) return BLOCKS.dirt.id;
   if (pos.y < terrainHeight) return BLOCKS.stone.id;
 
