@@ -4,8 +4,6 @@ import * as SimplexNoise from "simplex-noise";
 import { RNG } from "./generalUtils";
 import { FractalNoise } from "./classes/FractalNoise";
 
-
-
 export interface ResourceGenerator {
   noise3D: SimplexNoise.NoiseFunction3D;
   resource: Resource;
@@ -16,45 +14,47 @@ export interface ResourceGenerator {
 }
 
 export function terrainHeight(
-  pos: { x: number; z: number},
+  pos: { x: number; z: number },
   heightMap: Uint8Array,
   params: TerrainGenParams,
-  fractalNoise: FractalNoise,
+  fractalNoise: FractalNoise, 
+  wCoords: { x: number; y: number; z: number }
 ) {
-  const value = heightMap[pos.x + (pos.z * params.chunkSize)]
+  const value = heightMap[pos.x + pos.z * params.chunkSize];
   if (value === 0) {
-    const noiseValue = fractalNoise.fractal2D(pos.x, pos.z)
-    const heightValue = (noiseValue + 1) / 2
-    const blockHeight = Math.floor(heightValue * params.maxWorldHeight - 1)
-    heightMap[pos.x + (pos.z * params.chunkSize)] = blockHeight
-    return blockHeight
+    const noiseValue = fractalNoise.fractal2D(pos.x + wCoords.x, pos.z + wCoords.z);
+    const heightValue = (noiseValue + 1) / 2;
+    const blockHeight = Math.floor(heightValue * params.maxWorldHeight - 1);
+    heightMap[pos.x + pos.z * params.chunkSize] = blockHeight;
+    return blockHeight;
   }
-  return value
+  return value;
 }
 
 export function dirtDepth(
-  pos: { x: number; z: number},
+  pos: { x: number; z: number },
   maxDirtDepth: number,
   dirtDepthMap: Uint8Array,
   params: TerrainGenParams,
   noiseFunc: SimplexNoise.NoiseFunction2D,
+  wCoords: { x: number; y: number; z: number }
 ) {
-  const value = dirtDepthMap[pos.x + (pos.z * params.chunkSize)]
+  const value = dirtDepthMap[pos.x + pos.z * params.chunkSize];
   if (value === 0) {
-    const noiseValue = noiseFunc(pos.x, pos.z)
-    const heightValue = (noiseValue + 1) / 2
-    const dirtDepth = Math.floor(heightValue * maxDirtDepth)
-    dirtDepthMap[pos.x + (pos.z * params.chunkSize)] = dirtDepth
-    return dirtDepth
+    const noiseValue = noiseFunc((pos.x + wCoords.x) / 30, (pos.z + wCoords.z) / 30);
+    const heightValue = (noiseValue + 1) / 2;
+    const dirtDepth = Math.floor(heightValue * maxDirtDepth);
+    dirtDepthMap[pos.x + pos.z * params.chunkSize] = dirtDepth;
+    return dirtDepth;
   }
-  return value
+  return value;
 }
 
 export function getTerrainXYZ(
-  pos: {x: number, y: number, z: number},
+  pos: { x: number; y: number; z: number },
   terrainHeight: number,
   dirtDepth: number,
-  params: TerrainGenParams,
+  params: TerrainGenParams
 ) {
   if (pos.y > terrainHeight) return BLOCKS.air.id;
 
@@ -62,15 +62,16 @@ export function getTerrainXYZ(
   // if (resource && pos.y <= terrainHeight) return resource;
 
   if (pos.y === terrainHeight && pos.y < 200) return BLOCKS.grass.id;
-  if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth) return BLOCKS.dirt.id;
+  if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth)
+    return BLOCKS.dirt.id;
   if (pos.y < terrainHeight) return BLOCKS.stone.id;
 
   return BLOCKS.air.id;
 }
 
 export function getResourceXYZ(
-  pos: {x: number, y: number, z: number},
-  resources: ResourceGenerator[],
+  pos: { x: number; y: number; z: number },
+  resources: ResourceGenerator[]
 ) {
   for (let i = 0; i < resources.length; i++) {
     const resource = resources[i];

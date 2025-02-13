@@ -12,15 +12,15 @@ export interface FractalNoiseParams {
 };
 
 export class FractalNoise {
-  private readonly fast: boolean;
-  private readonly amplitude: number;
-  private readonly frequency: number;
-  private readonly octaves: number;
-  private readonly lacunarity: number;
-  private readonly persistence: number;
-  private readonly seed: string | number;
-  private readonly noise2D: (x: number, y: number) => number;
-  private readonly noise3D: (x: number, y: number, z: number) => number;
+  private fast: boolean;
+  private amplitude: number;
+  private frequency: number;
+  private octaves: number;
+  private lacunarity: number;
+  private persistence: number;
+  private seed: string | number;
+  private noise2D: (x: number, y: number) => number;
+  private noise3D: (x: number, y: number, z: number) => number;
 
   constructor(params: FractalNoiseParams, seed: string | number) {
     this.fast = true;

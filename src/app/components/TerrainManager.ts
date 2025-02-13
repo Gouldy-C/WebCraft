@@ -77,12 +77,6 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
     
     this._init()
-
-    measureTime(() => {
-      
-    })
-
-    
   }
 
   update(playerPosition: THREE.Vector3) {
@@ -106,6 +100,7 @@ export class TerrainManager extends THREE.Object3D {
       this.activeChunks = new Set(newChunks)
       this._updateChunks(addedChunks, removedChunks)
     }
+    console.log(this.activeChunks.size)
   }
 
   _getVisibleChunks() {
