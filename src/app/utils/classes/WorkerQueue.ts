@@ -10,6 +10,7 @@ export interface WorkerObj {
   id: string;
   type: string;
   data: any;
+  buffers: ArrayBufferLike[]
 };
 
 export interface WorkerPostMessage {
@@ -62,7 +63,7 @@ export class WorkerQueue <T extends WorkerObj> {
         id: requestObj.id,
         workerId: i,
         request: requestObj,
-      })
+      }, requestObj.buffers)
     }
   }
 

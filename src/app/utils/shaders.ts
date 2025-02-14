@@ -4,16 +4,16 @@ export const V_SHADER = `
 // position(z):  unused
 uniform sampler2D uTextureConfig; // X: numTextures per Block, Y: startIndex in the texture array
 
-varying vec3 vertexNormal;
-varying vec2 vertexUV;
-varying float textureIndex;
+out vec3 vertexNormal;
+out vec2 vertexUV;
+out float textureIndex;
 
 vec3 decodeNormal(uint normalBits) {
   switch(normalBits) {
-    case 0u: return vec3(0.0, 1.0, 0.0);
-    case 1u: return vec3(0.0, -1.0, 0.0);
-    case 2u: return vec3(1.0, 0.0, 0.0);
-    case 3u: return vec3(-1.0, 0.0, 0.0);
+    case 0u: return vec3(1.0, 0.0, 0.0);
+    case 1u: return vec3(-1.0, 0.0, 0.0);
+    case 2u: return vec3(0.0, 1.0, 0.0);
+    case 3u: return vec3(0.0, -1.0, 0.0);
     case 4u: return vec3(0.0, 0.0, 1.0);
     case 5u: return vec3(0.0, 0.0, -1.0);
     default: return vec3(1.0, 0.0, 0.0);
@@ -23,9 +23,9 @@ vec3 decodeNormal(uint normalBits) {
 vec2 decodeUVCoords(uint UVBits) {
   switch(UVBits) {
     case 0u: return vec2(0.0, 0.0);
-    case 1u: return vec2(0.0, 1.0);
-    case 2u: return vec2(1.0, 0.0);
-    case 3u: return vec2(1.0, 1.0);
+    case 1u: return vec2(1.0, 0.0);
+    case 2u: return vec2(1.0, 1.0);
+    case 3u: return vec2(0.0, 1.0);
     default: return vec2(0.0, 0.0);
   }
 }
@@ -70,11 +70,11 @@ float getTextureIndex(float blockId, vec3 normal) {
 
 void main() {
   // Decode vertex data
-  float x = float(uint(position.x) & 0x3Fu);
-  float y = float((uint(position.x) >> 6) & 0x3Fu);
-  float z = float((uint(position.x) >> 12) & 0x3Fu);
-  uint normalIndex = uint((uint(position.x) >> 18) & 0x7u);
-  uint UVIndex = uint((uint(position.x) >> 21) & 0x3u);
+  float x = float(uint(position.x) & 0x1Fu);
+  float y = float((uint(position.x) >> 5) & 0x1Fu);
+  float z = float((uint(position.x) >> 10) & 0x1Fu);
+  uint normalIndex = uint((uint(position.x) >> 15) & 0x7u);
+  uint UVIndex = uint((uint(position.x) >> 18) & 0x3u);
   
   // Decode block and texture data
   float blockId = float(uint(position.y) & 0xFFFu);
@@ -92,13 +92,14 @@ void main() {
 export const F_SHADER = `
 uniform sampler2DArray uTextureArray;
 
-varying vec3 vertexNormal;
-varying vec2 vertexUV;
-varying float textureIndex;
+in vec3 vertexNormal;
+in vec2 vertexUV;
+in float textureIndex;
 
 out vec4 fragColor;
 
 void main() {
 	fragColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
+  // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 `;

@@ -21,8 +21,8 @@ export const defaultWorldStore: WorldStore = {
   terrain: {
     chunkSize: 32,
     maxWorldHeight: 256,
-    hDrawDist: 10,
-    vDrawDist: 3,
+    hDrawDist: 1,
+    vDrawDist: 1,
     seed: "default",
     fractalNoise: {
       amplitude: 0.7,
@@ -87,8 +87,7 @@ export class World extends THREE.Group {
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      this.params.terrain.chunkSize * this.params.terrain.hDrawDist +
-        5000
+      this.params.terrain.chunkSize * this.params.terrain.hDrawDist + 5000
     );
     const center = this.params.terrain.chunkSize / 2;
     this.orbitCamera.position.set(
@@ -116,7 +115,6 @@ export class World extends THREE.Group {
       this.params.terrain.vDrawDist * this.params.terrain.chunkSize
     );
     this.add(axesHelper);
-
   }
 
   update(dt: number) {

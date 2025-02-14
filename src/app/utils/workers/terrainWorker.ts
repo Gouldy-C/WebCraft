@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
 import { BitArray } from '../classes/BitArray';
-import { dirtDepth, getTerrainXYZ, terrainHeight } from '../chunkGenFunctions';
+import { dirtDepth, getTerrainXYZ, greedyMesher, terrainHeight } from '../chunkGenFunctions';
 import { arrayBuffer } from 'three/webgpu';
 
 export interface RequestVoxelData {
@@ -19,7 +19,7 @@ export interface RequestGeometryData {
   chunkKey: string;
   params: TerrainGenParams;
   voxelDataBuffer: ArrayBuffer;
-  currentChunk: { x: number; y: number; z: number };
+  binaryDataBuffer: ArrayBuffer
 }
 
 self.onmessage = (e: MessageEvent) => {
@@ -42,7 +42,7 @@ function genVoxelData(message: WorkerPostMessage) {
   const cCoords = coordsXYZFromKey(chunkKey);
   const wCoords = { x: cCoords.x * size, y: cCoords.y * size, z: cCoords.z * size }
 
-  const binaryData = new Uint16Array(size * size)
+  const binaryData = new Uint32Array(size * size * 3)
   const voxelData = new Uint16Array(size * size * size)
 
   const heightMap = new Uint8Array(size * size)
@@ -109,6 +109,9 @@ function genVoxelData(message: WorkerPostMessage) {
       
       for (let y = 0; y < size; y++) {
         const wy = wCoords.y + y;
+
+        // todo: add suport for block chnages by players via the diffs storage map
+
         const blockId = getTerrainXYZ(
           {x: wxCol, y: wy, z: wzCol},
           terrainHeight,
@@ -121,6 +124,9 @@ function genVoxelData(message: WorkerPostMessage) {
   
         if (blockId !== BLOCKS.air.id) {
           binaryData[z + (y * size)] = binaryData[z + (y * size)] | (1 << x);
+          binaryData[x + (y * size) + (size * size)] = binaryData[x + (y * size) + (size * size)] | (1 << z);
+          binaryData[x + (z * size) + (size * size * 2)] = binaryData[x + (z * size) + (size * size * 2)] | (1 << y);
+        } else {
           if (x === size - 1) solidExternal[0] = false;
           if (x === 0) solidExternal[1] = false;
           if (y === size - 1) solidExternal[2] = false;
@@ -137,13 +143,14 @@ function genVoxelData(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'voxelData',
+      type: 'genChunkVoxelData',
       data: {
         chunkKey,
         solidExternal,
         voxelDataBuffer: voxelData.buffer,
         binaryDataBuffer: binaryData.buffer,
       },
+      buffers: [voxelData.buffer, binaryData.buffer]
     },
   };
 
@@ -152,5 +159,29 @@ function genVoxelData(message: WorkerPostMessage) {
 
 function genMeshData(message: WorkerPostMessage) {
   const workerId = message.workerId
-  const { chunkKey, params, voxelDataBuffer } = message.request.data as RequestGeometryData
+  const { chunkKey, params, voxelDataBuffer, binaryDataBuffer } = message.request.data as RequestGeometryData
+
+  const size = params.chunkSize
+  const voxelData = new Uint16Array(voxelDataBuffer)
+  const binaryData = new Uint32Array(binaryDataBuffer)
+
+  let vertices = greedyMesher(voxelData, size)
+
+  const verticesBuffer = new Float32Array(vertices).buffer
+
+  const returnData: WorkerPostMessage = {
+    id: message.id,
+    workerId,
+    request: {
+      id: message.id,
+      type: 'genChunkMeshData',
+      data: {
+        chunkKey,
+        verticesBuffer,
+      },
+      buffers: [verticesBuffer]
+    },
+  };
+
+  self.postMessage(returnData, [verticesBuffer]);
 }

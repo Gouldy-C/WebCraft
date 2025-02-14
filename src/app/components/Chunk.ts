@@ -24,7 +24,7 @@ export class Chunk {
   needsUpdate: boolean = false
   
   // Data
-  binaryData: BitArray[]
+  binaryData: Uint32Array
   blockData: Uint16Array
   mesh: THREE.Mesh | null = null
 
@@ -48,7 +48,7 @@ export class Chunk {
     }
     // this.lod = params.lod
 
-    this.binaryData = []
+    this.binaryData = new Uint32Array(this.size * this.size * 3)
     this.blockData = new Uint16Array(this.size * this.size * this.size)
 
     this._generateVoxelData()
@@ -61,17 +61,23 @@ export class Chunk {
   setVoxel(x: number, y: number, z: number, value: number) {
     const index = indexFromXYZCoords(x, y, z, this.size)
     this.blockData[index] = value
-    const bitArrayIndex = z + y * this.size
 
-    if (value === 0) this.binaryData[bitArrayIndex].clearBit(x)
-    else this.binaryData[bitArrayIndex].setBit(x)
+    if (value === 0){
+      this.binaryData[z + (y * this.size)] = this.binaryData[z + (y * this.size)] & ~(1 << x);
+      this.binaryData[x + (y * this.size) + (this.size * this.size)] = this.binaryData[x + (y * this.size) + (this.size * this.size)] & ~(1 << z);
+      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] = this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] & ~(1 << y);
+    } else {
+      this.binaryData[z + (y * this.size)] = this.binaryData[z + (y * this.size)] | (1 << x);
+      this.binaryData[x + (y * this.size) + (this.size * this.size)] = this.binaryData[x + (y * this.size) + (this.size * this.size)] | (1 << z);
+      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] = this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] | (1 << y);
+    }
 
     this.generateMesh()
   }
 
   clear() {
     this._disposeMesh()
-    this.binaryData = []
+    this.binaryData = new Uint32Array(this.size * this.size * 3)
     this.blockData = new Uint16Array(this.size * this.size * this.size)
     this.chunkCoords = { x: 0, y: 0, z: 0 }
     this.worldPosition = { x: 0, y: 0, z: 0 }
@@ -93,7 +99,7 @@ export class Chunk {
     }
     // this.lod = params.lod
 
-    this.binaryData = []
+    this.binaryData = new Uint32Array(this.size * this.size * 3)
     this.blockData = new Uint16Array(this.size * this.size * this.size)
 
     this._generateVoxelData()
@@ -103,11 +109,11 @@ export class Chunk {
     const { type, data } = obj;
     if (type === "genChunkVoxelData") {
       this.blockData = new Uint16Array(data.voxelDataBuffer);
-      this.binaryData = BitArray.fromBuffer(data.binaryDataBuffer, this.size);
+      this.binaryData = new Uint32Array(data.binaryDataBuffer)
       this.generateMesh();
     }
     if (type === "genChunkMeshData") {
-      this._processMeshData(data.meshDataBuffer);
+      this._processMeshData(data.verticesBuffer);
     }
   }
 
@@ -121,6 +127,7 @@ export class Chunk {
         params: this.terrainGenParams,
         diffs: diffs,
       },
+      buffers: []
     };
     this.terrainManager.workerQueue.addRequest(requestData);
   }
@@ -133,21 +140,24 @@ export class Chunk {
         chunkKey: this.id,
         params: this.terrainGenParams,
         voxelDataBuffer: this.blockData.buffer,
-        binaryDataBuffer: BitArray.getBufferFromBitArrays(this.binaryData),
+        binaryDataBuffer: this.binaryData.buffer,
       },
+      buffers: [this.blockData.buffer, this.binaryData.buffer]
     };
     this.terrainManager.workerQueue.addPriorityRequest(requestData);
   }
 
-  private _processMeshData(meshDataBuffer: ArrayBuffer) {
+  private _processMeshData(verticesBuffer: ArrayBuffer) {
     if (!this.mesh) {
       this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.shaderMaterial)
       this.terrainManager.add(this.mesh)
     }
-    const meshData = new Uint32Array(meshDataBuffer);
-    const bufferAttribute = new THREE.BufferAttribute(meshData, 2)
+
+    const verticesData = new Float32Array(verticesBuffer);
+    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
+
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
-    this.mesh.geometry.setAttribute('voxleVertexData', bufferAttribute)
+    this.mesh.geometry.setAttribute('position', bufferAttribute)
     this.mesh.geometry.computeBoundingSphere()
   }
 
