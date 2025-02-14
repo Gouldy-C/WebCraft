@@ -189,10 +189,10 @@ export function greedyMesher(volume: Uint16Array, size: number) {
             mask[maskIndex] = 0;
           }
           else if(!!voxel1) {
-            mask[maskIndex] = -voxel1;
+            mask[maskIndex] = voxel1;
           }
           else {
-            mask[maskIndex] = voxel2;
+            mask[maskIndex] = -voxel2;
           }
         }
       }

@@ -77,43 +77,44 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
     
     this._init()
-    const vertices = [
-      (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
-      4,
-      0,
-      (1 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 0,
-      4,
-      0,
-      (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
-      4,
-      0,
-      (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
-      4,
-      0,
-      (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
-      4,
-      0,
-      (3 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 5,
-      4,
-      0,
-    ]
-    const firstVertex = vertices[2];
-    console.log({
-      x: firstVertex & 0x1F,
-      y: (firstVertex >> 5) & 0x1F,
-      z: (firstVertex >> 10) & 0x1F,
-      normal: (firstVertex >> 15) & 0x7,
-      uv: (firstVertex >> 18) & 0x3
-    });
+    // const vertices = [
+    //   (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
+    //   4,
+    //   0,
+    //   (1 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 0,
+    //   4,
+    //   0,
+    //   (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
+    //   4,
+    //   0,
+    //   (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
+    //   4,
+    //   0,
+    //   (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
+    //   4,
+    //   0,
+    //   (3 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 5,
+    //   4,
+    //   0,
+    // ]
+    // const firstVertex = vertices[2];
+    // console.log({
+    //   x: firstVertex & 0x1F,
+    //   y: (firstVertex >> 5) & 0x1F,
+    //   z: (firstVertex >> 10) & 0x1F,
+    //   normal: (firstVertex >> 15) & 0x7,
+    //   uv: (firstVertex >> 18) & 0x3
+    // });
     
-    const verticesData = new Float32Array(vertices);
-    console.log(verticesData)
-    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
+    // const verticesData = new Float32Array(vertices);
+    // console.log(verticesData)
+    // const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
     const bufferGeometry = new THREE.BufferGeometry()
-    bufferGeometry.setAttribute('position', bufferAttribute)
+    console.log(bufferGeometry.attributes)
+    // bufferGeometry.setAttribute('position', bufferAttribute)
     
-    const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
-    this.add(testMesh)
+    // const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
+    // this.add(testMesh)
   }
 
   update(playerPosition: THREE.Vector3) {
@@ -290,7 +291,5 @@ export class TerrainManager extends THREE.Object3D {
       .catch((err) => {
         console.error(err);
       });
-
   }
-
 }
