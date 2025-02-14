@@ -5,9 +5,7 @@ import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
 import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { BitArray } from '../classes/BitArray';
 import { dirtDepth, getTerrainXYZ, greedyMesher, terrainHeight } from '../chunkGenFunctions';
-import { arrayBuffer } from 'three/webgpu';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -24,12 +22,12 @@ export interface RequestGeometryData {
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "genChunkVoxelData") {
-    measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
-    // genVoxelData(e.data)
+    // measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
+    genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    // genMeshData(e.data)
+    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    genMeshData(e.data)
   }
 };
 
@@ -143,7 +141,7 @@ function genVoxelData(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'genChunkVoxelData',
+      type: 'genChunkVoxel',
       data: {
         chunkKey,
         solidExternal,
@@ -174,7 +172,7 @@ function genMeshData(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'genChunkMeshData',
+      type: 'genChunkMesh',
       data: {
         chunkKey,
         verticesBuffer,

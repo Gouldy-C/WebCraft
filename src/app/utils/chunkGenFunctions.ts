@@ -1,7 +1,7 @@
 import { TerrainGenParams } from "../components/TerrainManager";
-import { BLOCKS, Resource, RESOURCES } from "./BlocksData";
+import { BLOCKS, Resource} from "./BlocksData";
 import * as SimplexNoise from "simplex-noise";
-import { indexFromXYZCoords, RNG } from "./generalUtils";
+import { indexFromXYZCoords} from "./generalUtils";
 import { FractalNoise } from "./classes/FractalNoise";
 
 export interface ResourceGenerator {
@@ -226,13 +226,12 @@ export function greedyMesher(volume: Uint16Array, size: number) {
             let uv
             if(voxelType > 0) {
               normal = axis * 2
-              uv = [0, 1, 2, 0, 2, 3]
+              uv = [1, 2, 3, 1, 3, 0]
               dv[altAxis2] = height;
               du[altAxis1] = width;
-
             } else {
               normal = axis * 2 + 1
-              uv = [1, 2, 3, 1, 3, 0]
+              uv = [1, 3, 0, 1, 2, 3]
               voxelType = -voxelType
               du[altAxis2] = height;
               dv[altAxis1] = width;

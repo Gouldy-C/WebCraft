@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { World } from "./World";
-import { ChunksManager } from "./ChunksManager";
 import {
   chunkKeyFromXYZ,
   coordsXYZFromKey,
@@ -12,7 +11,9 @@ import {
   worldToChunkCoords,
 } from "../utils/generalUtils";
 import { WorkerObj, WorkerQueue } from "../utils/classes/WorkerQueue";
-import { FractalNoise, FractalNoiseParams } from "../utils/classes/FractalNoise";
+import {
+  FractalNoiseParams,
+} from "../utils/classes/FractalNoise";
 import { Chunk } from "./Chunk";
 import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
@@ -45,7 +46,7 @@ export class TerrainManager extends THREE.Object3D {
 
   chunks: Map<string, Chunk> = new Map();
   activeChunks: Set<string> = new Set();
-  chunkPool:Chunk[] = [];
+  chunkPool: Chunk[] = [];
 
   params: TerrainGenParams;
   chunkSize: number;
@@ -66,8 +67,8 @@ export class TerrainManager extends THREE.Object3D {
     this.hDrawDist = this.params.hDrawDist;
     this.vDrawDist = this.params.vDrawDist;
     this.currentChunk = { x: Infinity, y: Infinity, z: Infinity };
-    this.shaderMaterial = new THREE.ShaderMaterial();
-    this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16)
+    this.shaderMaterial = new THREE.RawShaderMaterial();
+    this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16);
 
     const workerParams = {
       url: new URL("../utils/workers/terrainWorker.ts", import.meta.url),
@@ -75,46 +76,85 @@ export class TerrainManager extends THREE.Object3D {
       callback: (obj: WorkerObj) => this._handleWorkerMessage(obj),
     };
     this.workerQueue = new WorkerQueue(workerParams);
-    
-    this._init()
-    // const vertices = [
-    //   (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
-    //   4,
-    //   0,
-    //   (1 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 0,
-    //   4,
-    //   0,
-    //   (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
-    //   4,
-    //   0,
-    //   (0 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 0,
-    //   4,
-    //   0,
-    //   (2 << 18) | (2 << 15) | (5 << 10) | (0 << 5) | 5,
-    //   4,
-    //   0,
-    //   (3 << 18) | (2 << 15) | (0 << 10) | (0 << 5) | 5,
-    //   4,
-    //   0,
-    // ]
-    // const firstVertex = vertices[2];
-    // console.log({
-    //   x: firstVertex & 0x1F,
-    //   y: (firstVertex >> 5) & 0x1F,
-    //   z: (firstVertex >> 10) & 0x1F,
-    //   normal: (firstVertex >> 15) & 0x7,
-    //   uv: (firstVertex >> 18) & 0x3
-    // });
-    
-    // const verticesData = new Float32Array(vertices);
-    // console.log(verticesData)
-    // const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
-    const bufferGeometry = new THREE.BufferGeometry()
-    console.log(bufferGeometry.attributes)
-    // bufferGeometry.setAttribute('position', bufferAttribute)
-    
-    // const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
-    // this.add(testMesh)
+
+    this._init();
+    const blockId = 2
+    const vertices = [];
+
+    // Helper function to encode vertex data
+    function encodeVertex(x: number, y: number, z: number, uv: number, normal: number) {
+      return (uv << 18) | (normal << 15) | (z << 10) | (y << 5) | x;
+    }
+
+    // Front face
+    vertices.push(
+      encodeVertex(5, 5, 0, 0, 4), blockId, 0,
+      encodeVertex(5, 0, 0, 3, 4), blockId, 0,
+      encodeVertex(0, 0, 0, 2, 4), blockId, 0,
+      encodeVertex(5, 5, 0, 0, 4), blockId, 0,
+      encodeVertex(0, 0, 0, 2, 4), blockId, 0,
+      encodeVertex(0, 5, 0, 1, 4), blockId, 0
+    );
+
+    // Back face
+    vertices.push(
+      encodeVertex(0, 0, 5, 3, 5), blockId, 0,
+      encodeVertex(5, 0, 5, 2, 5), blockId, 0,
+      encodeVertex(5, 5, 5, 1, 5), blockId, 0,
+      encodeVertex(0, 0, 5, 3, 5), blockId, 0,
+      encodeVertex(5, 5, 5, 1, 5), blockId, 0,
+      encodeVertex(0, 5, 5, 0, 5), blockId, 0
+    );
+
+    // Left face
+    vertices.push(
+      encodeVertex(0, 5, 0, 0, 1), blockId, 0,
+      encodeVertex(0, 0, 0, 3, 1), blockId, 0,
+      encodeVertex(0, 5, 5, 1, 1), blockId, 0,
+      encodeVertex(0, 0, 0, 3, 1), blockId, 0,
+      encodeVertex(0, 0, 5, 2, 1), blockId, 0,
+      encodeVertex(0, 5, 5, 1, 1), blockId, 0,
+    );
+
+    // Right face
+    vertices.push(
+      encodeVertex(5, 5, 5, 0, 0), blockId, 0,
+      encodeVertex(5, 0, 5, 3, 0), blockId, 0,
+      encodeVertex(5, 0, 0, 2, 0), blockId, 0,
+      encodeVertex(5, 5, 5, 0, 0), blockId, 0,
+      encodeVertex(5, 0, 0, 2, 0), blockId, 0,
+      encodeVertex(5, 5, 0, 1, 0), blockId, 0,
+    );
+
+    // Top face
+    vertices.push(
+      encodeVertex(0, 5, 0, 2, 2), blockId, 0,
+      encodeVertex(0, 5, 5, 3, 2), blockId, 0,
+      encodeVertex(5, 5, 5, 0, 2), blockId, 0,
+      encodeVertex(0, 5, 0, 2, 2), blockId, 0,
+      encodeVertex(5, 5, 5, 0, 2), blockId, 0,
+      encodeVertex(5, 5, 0, 1, 2), blockId, 0,
+    );
+
+    // Bottom face
+    vertices.push(
+      encodeVertex(5, 0, 0, 1, 3), blockId, 0,
+      encodeVertex(5, 0, 5, 2, 3), blockId, 0,
+      encodeVertex(0, 0, 0, 0, 3), blockId, 0,
+      encodeVertex(0, 0, 0, 0, 3), blockId, 0,
+      encodeVertex(5, 0, 5, 2, 3), blockId, 0,
+      encodeVertex(0, 0, 5, 3, 3), blockId, 0
+    );
+
+    const verticesData = new Float32Array(vertices);
+    console.log(verticesData)
+    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
+    const bufferGeometry = new THREE.BufferGeometry();
+    console.log(bufferGeometry.attributes);
+    bufferGeometry.setAttribute('position', bufferAttribute)
+
+    const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
+    this.add(testMesh)
   }
 
   update(playerPosition: THREE.Vector3) {
@@ -131,13 +171,12 @@ export class TerrainManager extends THREE.Object3D {
       chunkCoords.z !== this.currentChunk.z ||
       chunkCoords.y !== this.currentChunk.y
     ) {
-      this.currentChunk = chunkCoords
-      const newChunks = this._getVisibleChunks()
-      const removedChunks = setDifference(this.activeChunks, newChunks)
-      const addedChunks = setDifference(newChunks, this.activeChunks)
-      this.activeChunks = new Set(newChunks)
-      this._updateChunks(addedChunks, removedChunks)
-      
+      this.currentChunk = chunkCoords;
+      const newChunks = this._getVisibleChunks();
+      const removedChunks = setDifference(this.activeChunks, newChunks);
+      const addedChunks = setDifference(newChunks, this.activeChunks);
+      this.activeChunks = new Set(newChunks);
+      this._updateChunks(addedChunks, removedChunks);
     }
   }
 
@@ -171,7 +210,7 @@ export class TerrainManager extends THREE.Object3D {
     for (const chunkKey of addedChunks) {
       if (this.chunks.has(chunkKey)) continue;
       const chunk = this.chunkPool.pop();
-      if (chunk) chunk.reuseChunk(this, chunkKey)
+      if (chunk) chunk.reuseChunk(this, chunkKey);
       else this.chunks.set(chunkKey, new Chunk(this, chunkKey));
       this.activeChunks.add(chunkKey);
     }
@@ -266,8 +305,10 @@ export class TerrainManager extends THREE.Object3D {
 
   _init() {
     for (const block in BLOCKS) {
-      if (block === "air") continue;
-      this.textureArrayBuilder.setTextures(BLOCKS[block].id, BLOCKS[block].textures)
+      this.textureArrayBuilder.setTextures(
+        BLOCKS[block].id,
+        BLOCKS[block].textures
+      );
     }
 
     this.textureArrayBuilder
@@ -282,7 +323,7 @@ export class TerrainManager extends THREE.Object3D {
               uTextureArray: { value: textureArray },
               uTextureConfig: { value: textureArrayConfig },
             },
-            transparent: true
+            transparent: true,
           });
 
           this.shaderMaterial.needsUpdate = true;

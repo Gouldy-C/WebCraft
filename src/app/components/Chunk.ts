@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { BitArray } from '../utils/classes/BitArray'
 import { TerrainGenParams, TerrainManager } from './TerrainManager'
 import { World } from './World'
 import { WorkerObj } from '../utils/classes/WorkerQueue'

@@ -1,8 +1,13 @@
 export const V_SHADER = `
-// position(x): 9 unused bits | 2 bit uv | 3 bit normal | 6 bit z | 6 bit y | 6 bit x
-// position(y):  21 unused bits | 11 bit block id
-// position(z):  unused
-uniform sampler2D uTextureConfig; // X: numTextures per Block, Y: startIndex in the texture array
+precision highp float;
+
+uniform sampler2D uTextureConfig; // X: numTextures , Y: startIndex in the texture array
+
+// Declare uniforms (provided by Three.js)
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
+
+in vec3 position;
 
 out vec3 vertexNormal;
 out vec2 vertexUV;
@@ -87,10 +92,15 @@ void main() {
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
 }
-`;
+`
 
 export const F_SHADER = `
+precision highp float;
+precision highp sampler2DArray;
+
 uniform sampler2DArray uTextureArray;
+uniform mat4 viewMatrix;
+uniform vec3 cameraPosition;
 
 in vec3 vertexNormal;
 in vec2 vertexUV;
@@ -99,7 +109,8 @@ in float textureIndex;
 out vec4 fragColor;
 
 void main() {
+  vec2 uv = fract(vertexUV * vec2(3.0, 3.0));
 	fragColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
   // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
-`;
+`

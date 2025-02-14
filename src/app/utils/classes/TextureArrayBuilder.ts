@@ -7,7 +7,7 @@ export class TextureArrayBuilder {
   texturesMap: Map<number, (THREE.Texture | undefined | null)[]> = new Map();
   numberTextures: number = 0
   numberLoaded: number = 0
-  texturesloaded: boolean = false
+  texturesLoaded: boolean = false
 
   textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
   tgaLoader: TGALoader = new TGALoader();
@@ -32,7 +32,7 @@ export class TextureArrayBuilder {
   }
 
   setTextures(key: number, texturesUrls: string[], colorMasks?: (number[] | null)[]) {
-    this.texturesloaded = false;
+    this.texturesLoaded = false;
     this.textureArrayNeedsUpdate = true;
     this.disposeTextures(key);
     this.texturesMap.set(key, []);
@@ -147,7 +147,7 @@ export class TextureArrayBuilder {
   }
 
   areTexturesLoaded() {
-    return this.texturesloaded
+    return this.texturesLoaded
   }
 
   _useCorrectLoader(url: string) {
@@ -177,7 +177,7 @@ export class TextureArrayBuilder {
         this.numberTextures++;
       }
     }
-    if (this.numberLoaded === this.numberTextures) this.texturesloaded = true
+    if (this.numberLoaded === this.numberTextures) this.texturesLoaded = true
   }
 
   disposeTextures(key: number) {
