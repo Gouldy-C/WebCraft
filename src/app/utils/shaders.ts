@@ -103,7 +103,7 @@ void main() {
   vec4 texColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
 	vec3 debugNormal = normalize(vertexNormal) * 0.5 + 0.5;
 
-  // fragColor = texColor;
-  fragColor = vec4(debugNormal, 1.0);
+  fragColor = texColor;
+  // fragColor = vec4(debugNormal, 1.0);
 }
 `;

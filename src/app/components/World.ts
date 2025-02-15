@@ -120,7 +120,7 @@ export class World extends THREE.Group {
     );
     this.add(axesHelper);
 
-    const helper = new THREE.CameraHelper(this.activeCamera);
+    // const helper = new THREE.CameraHelper(this.activeCamera);
     // this.add(helper);
   }
 

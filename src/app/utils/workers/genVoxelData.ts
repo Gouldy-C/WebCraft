@@ -10,7 +10,7 @@ import {
 } from "../generalUtils";
 import { WorkerPostMessage } from "../classes/WorkerQueue";
 import { VoxelGenXYZ } from "../classes/VoxelGenXYZ";
-import { BitArray } from "../classes/BitArray";
+import { BitArray } from "../classes/unused/BitArray";
 
 export interface ReturnVoxelData {
   chunkKey: string;

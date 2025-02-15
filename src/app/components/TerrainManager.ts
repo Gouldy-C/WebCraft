@@ -2,9 +2,7 @@ import * as THREE from "three";
 import { World } from "./World";
 import {
   chunkKeyFromXYZ,
-  coordsXYZFromKey,
   getDirections,
-  keyFromXYZCoords,
   measureTime,
   setDifference,
   spiralChunkKeys,

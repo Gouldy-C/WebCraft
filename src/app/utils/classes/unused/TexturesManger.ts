@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TGALoader } from 'three/addons/loaders/TGALoader.js';
-import { BLOCKS } from '../BlocksData';
+import { BLOCKS } from '../../BlocksData';
 
 const TEXTURES = {
   bedrock: '/textures/blocks/bedrock.png',
