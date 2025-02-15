@@ -67,7 +67,7 @@ export class TerrainManager extends THREE.Object3D {
     this.hDrawDist = this.params.hDrawDist;
     this.vDrawDist = this.params.vDrawDist;
     this.currentChunk = { x: Infinity, y: Infinity, z: Infinity };
-    this.shaderMaterial = new THREE.RawShaderMaterial();
+    this.shaderMaterial = new THREE.ShaderMaterial();
     this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16);
 
     const workerParams = {
@@ -78,7 +78,7 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
 
     this._init();
-    const blockId = 2
+    const blockId = 1
     const vertices = [];
 
     // Helper function to encode vertex data
@@ -147,11 +147,11 @@ export class TerrainManager extends THREE.Object3D {
     );
 
     const verticesData = new Float32Array(vertices);
-    console.log(verticesData)
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
     const bufferGeometry = new THREE.BufferGeometry();
-    console.log(bufferGeometry.attributes);
     bufferGeometry.setAttribute('position', bufferAttribute)
+    bufferGeometry.computeBoundingSphere();
+    bufferGeometry.computeBoundingBox();
 
     const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
     this.add(testMesh)

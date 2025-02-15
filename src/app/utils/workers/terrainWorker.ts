@@ -5,7 +5,8 @@ import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
 import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { dirtDepth, getTerrainXYZ, greedyMesher, terrainHeight } from '../chunkGenFunctions';
+import { binaryGreedyMesher, dirtDepth, getTerrainXYZ, greedyMesher, terrainHeight } from '../chunkGenFunctions';
+import { RowToPlaneSwizzler } from '../classes/RowToPlaneSwizzler';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -117,13 +118,13 @@ function genVoxelData(message: WorkerPostMessage) {
           params
         );
   
-        const index = x + z * size + y * size * size;
+        const index = x + y * size + z * size * size;
         voxelData[index] = blockId;
   
         if (blockId !== BLOCKS.air.id) {
-          binaryData[z + (y * size)] = binaryData[z + (y * size)] | (1 << x);
-          binaryData[x + (y * size) + (size * size)] = binaryData[x + (y * size) + (size * size)] | (1 << z);
-          binaryData[x + (z * size) + (size * size * 2)] = binaryData[x + (z * size) + (size * size * 2)] | (1 << y);
+          binaryData[y + (z * size)] |= 1 << x;
+          binaryData[x + (z * size) + (size * size)] |= 1 << z;
+          binaryData[x + (y * size) + (size * size * 2)] |= 1 << y;
         } else {
           if (x === size - 1) solidExternal[0] = false;
           if (x === 0) solidExternal[1] = false;
@@ -135,6 +136,10 @@ function genVoxelData(message: WorkerPostMessage) {
       }
     }
   }
+
+  const planeSwizzler = new RowToPlaneSwizzler(size);
+  planeSwizzler.processFacesFromRows(binaryData);
+  console.log(planeSwizzler.visualizePlane("xPos", 0));
 
   const returnData: WorkerPostMessage = {
     id: message.id,
@@ -163,7 +168,7 @@ function genMeshData(message: WorkerPostMessage) {
   const voxelData = new Uint16Array(voxelDataBuffer)
   const binaryData = new Uint32Array(binaryDataBuffer)
 
-  let vertices = greedyMesher(voxelData, size)
+  let vertices = binaryGreedyMesher(voxelData, binaryData, size)
 
   const verticesBuffer = new Float32Array(vertices).buffer
 
@@ -172,7 +177,7 @@ function genMeshData(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'genChunkMesh',
+      type: 'genChunkMeshData',
       data: {
         chunkKey,
         verticesBuffer,

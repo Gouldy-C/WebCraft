@@ -74,6 +74,9 @@ export class World extends THREE.Group {
     super();
 
     this.scene = scene;
+    this.scene.background = new THREE.Color("rgb(154, 218, 255)");
+
+
     this.inputManager = scene.inputManager;
     this.accumulator = 0;
 
@@ -89,6 +92,8 @@ export class World extends THREE.Group {
       0.1,
       this.params.terrain.chunkSize * this.params.terrain.hDrawDist + 5000
     );
+    this.orbitCamera.updateProjectionMatrix();
+    this.orbitCamera.updateMatrixWorld();
     const center = this.params.terrain.chunkSize / 2;
     this.orbitCamera.position.set(
       center,
@@ -104,32 +109,29 @@ export class World extends THREE.Group {
     this.activeCamera = this.orbitCamera;
     this.add(this.activeCamera);
 
-    this.scene.background = new THREE.Color("rgb(154, 218, 255)");
-    this.sun.lookAt(0, 0, 0);
-    this.add(this.sun);
-    this.add(this.ambientLight);
+    // this.sun.lookAt(0, 0, 0);
+    // this.add(this.sun);
+    // this.add(this.ambientLight);
 
-    this.pos = new THREE.Vector3(0, 0, 1);
+    this.pos = new THREE.Vector3(0, 0, 0);
 
     const axesHelper = new THREE.AxesHelper(
       this.params.terrain.vDrawDist * this.params.terrain.chunkSize
     );
     this.add(axesHelper);
+
+    const helper = new THREE.CameraHelper(this.activeCamera);
+    // this.add(helper);
   }
 
   update(dt: number) {
     this.accumulator += dt;
     this.terrain.update(this.pos);
-    this.controls.update();
   }
 
   getVoxel(x: number, y: number, z: number) {
     return this.terrain.getVoxel(x, y, z);
   }
-
-  // hideVoxel(x: number, y: number, z: number) {
-  //   return this.terrain.hideVoxel(x, y, z);
-  // }
 
   addVoxel(x: number, y: number, z: number, blockId: number) {
     return this.terrain.addVoxel(x, y, z, blockId);
@@ -138,8 +140,4 @@ export class World extends THREE.Group {
   removeVoxel(x: number, y: number, z: number) {
     return this.terrain.removeVoxel(x, y, z);
   }
-
-  // revealBlock(x: number, y: number, z: number) {
-  //   return this.terrain.revealVoxel(x, y, z);
-  // }
 }

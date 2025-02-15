@@ -62,8 +62,7 @@ export function getTerrainXYZ(
   // if (resource && pos.y <= terrainHeight) return resource;
 
   if (pos.y === terrainHeight && pos.y < 200) return BLOCKS.grass.id;
-  if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth)
-    return BLOCKS.dirt.id;
+  if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth) return BLOCKS.dirt.id;
   if (pos.y < terrainHeight) return BLOCKS.stone.id;
 
   return BLOCKS.air.id;
@@ -175,7 +174,7 @@ export function greedyMesher(volume: Uint16Array, size: number) {
     const step = [0,0,0];
     step[axis] = 1;
 
-    mask = new Int32Array(size * size)
+    // mask = new Int32Array(size * size)
 
     for(dIndex[axis] = -1; dIndex[axis] < size; ) {
       let maskIndex = 0;
@@ -184,8 +183,8 @@ export function greedyMesher(volume: Uint16Array, size: number) {
         for(dIndex[altAxis1] = 0; dIndex[altAxis1] < size; dIndex[altAxis1]++, maskIndex++) {
           let voxel1 = (0 <= dIndex[axis] ? volume[indexFromXYZCoords(dIndex[0], dIndex[1], dIndex[2], size)] : 0)
           const v2Pos = [dIndex[0] + step[0], dIndex[1] + step[1], dIndex[2] + step[2]]
-          let voxel2 = (dIndex[axis] <  size - 1 ? volume[indexFromXYZCoords(v2Pos[0], v2Pos[1], v2Pos[2], size)] : 0);
-          if((!!voxel1) === (!!voxel2)) {
+          let voxel2 = (dIndex[axis] <  size ? volume[indexFromXYZCoords(v2Pos[0], v2Pos[1], v2Pos[2], size)] : 0);
+          if((voxel1 !== 0) === (voxel2 !== 0) ) {
             mask[maskIndex] = 0;
           }
           else if(!!voxel1) {
@@ -270,4 +269,10 @@ export function greedyMesher(volume: Uint16Array, size: number) {
     }
   }
   return vertices;
+}
+
+
+export function binaryGreedyMesher(voxelArray: Uint16Array, binaryArray: Uint32Array, size: number) {
+  const packedVertice: number[] = []
+
 }

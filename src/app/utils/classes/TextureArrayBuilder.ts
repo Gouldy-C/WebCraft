@@ -140,6 +140,8 @@ export class TextureArrayBuilder {
     this.textureArray.needsUpdate = true;
 
     this.textureArrayConfig = new THREE.DataTexture(new Uint8Array(rawTextureConfig), rawTextureConfig.length / 2, 1, THREE.RGFormat, THREE.UnsignedByteType);
+    this.textureArrayConfig.minFilter = THREE.NearestFilter;
+    this.textureArrayConfig.magFilter = THREE.NearestFilter;
     this.textureArrayConfig.name = this.textureArrayName;
     this.textureArrayConfig.needsUpdate = true;
 

@@ -24,7 +24,6 @@ export class MainScene extends THREE.Scene {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: "high-performance",
-      alpha: true
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -36,15 +35,14 @@ export class MainScene extends THREE.Scene {
     this.world = new World(this);
     this.add(this.world);
 
-    // const width = this.world.params.terrain.chunkSize.width
-    // const drawDistance = this.world.params.terrain.drawDistance
-    // if (this.fogBoolean) {
-    //   this.fog = new THREE.Fog(
-    //     "#c4e2ff",
-    //     width * (drawDistance / 2),
-    //     width * (drawDistance / 2 + 2)
-    //   );
-    // }
+    const { chunkSize, hDrawDist } = this.world.params.terrain;
+    if (this.fogBoolean) {
+      this.fog = new THREE.Fog(
+        "#c4e2ff",
+        chunkSize * (hDrawDist / 2),
+        chunkSize * (hDrawDist / 2 + 2)
+      );
+    }
 
 
     // createUi(this.world, this.player);

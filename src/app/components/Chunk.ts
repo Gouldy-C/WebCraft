@@ -158,6 +158,7 @@ export class Chunk {
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
     this.mesh.geometry.setAttribute('position', bufferAttribute)
     this.mesh.geometry.computeBoundingSphere()
+    this.mesh.geometry.computeBoundingBox()
   }
 
 

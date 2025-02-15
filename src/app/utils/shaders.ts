@@ -1,13 +1,9 @@
 export const V_SHADER = `
 precision highp float;
+precision highp sampler2D;
+precision highp int;
 
 uniform sampler2D uTextureConfig; // X: numTextures , Y: startIndex in the texture array
-
-// Declare uniforms (provided by Three.js)
-uniform mat4 projectionMatrix;
-uniform mat4 modelViewMatrix;
-
-in vec3 position;
 
 out vec3 vertexNormal;
 out vec2 vertexUV;
@@ -36,19 +32,18 @@ vec2 decodeUVCoords(uint UVBits) {
 }
 
 float getTextureIndex(float blockId, vec3 normal) {
-  // Calculate UV based on texture width
-  float uvX = blockId / float(textureSize(uTextureConfig, 0).x);
-  vec2 blockInfo = texture(uTextureConfig, vec2(uvX, 0.0)).rg;
+  float textureSize = float(textureSize(uTextureConfig, 0).x);
+  float uvX = blockId / (textureSize - 1.0);
+  vec2 blockInfo = texture(uTextureConfig, vec2(uvX, 0)).rg;
   float numTextures = blockInfo.r * 255.0;
   float startIndex = blockInfo.g * 255.0;
 
-  // Determine face orientation with better threshold
-  bool isTop = normal.y > 0.99;
-  bool isBottom = normal.y < -0.99;
-  bool isRight = normal.x > 0.99;
-  bool isLeft = normal.x < -0.99;
-  bool isFront = normal.z > 0.99;
-  bool isBack = normal.z < -0.99;
+  bool isTop = normal.y > 0.9;
+  bool isBottom = normal.y < -0.9;
+  bool isRight = normal.x > 0.9;
+  bool isLeft = normal.x < -0.9;
+  bool isFront = normal.z > 0.9;
+  bool isBack = normal.z < -0.9;
 
   if (numTextures >= 6.0) {
     if (isTop) return startIndex;
@@ -69,19 +64,17 @@ float getTextureIndex(float blockId, vec3 normal) {
     if (isBottom) return startIndex + 1.0;
     return startIndex + 2.0;
   }
-  // Default to single texture
+
   return startIndex;
 }
 
 void main() {
-  // Decode vertex data
   float x = float(uint(position.x) & 0x1Fu);
-  float y = float((uint(position.x) >> 5) & 0x1Fu);
-  float z = float((uint(position.x) >> 10) & 0x1Fu);
-  uint normalIndex = uint((uint(position.x) >> 15) & 0x7u);
-  uint UVIndex = uint((uint(position.x) >> 18) & 0x3u);
-  
-  // Decode block and texture data
+  float y = float(uint(position.x) >> 5 & 0x1Fu);
+  float z = float(uint(position.x) >> 10 & 0x1Fu);
+  uint normalIndex = uint(position.x) >> 15 & 0x7u;
+  uint UVIndex = uint(position.x) >> 18 & 0x3u;
+
   float blockId = float(uint(position.y) & 0xFFFu);
   
   vertexNormal = decodeNormal(normalIndex);
@@ -89,18 +82,15 @@ void main() {
   textureIndex = getTextureIndex(blockId, vertexNormal);
 
   vec3 pos = vec3(x, y, z);
-
-  gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( pos, 1.0 );
 }
-`
+`;
 
 export const F_SHADER = `
 precision highp float;
 precision highp sampler2DArray;
 
 uniform sampler2DArray uTextureArray;
-uniform mat4 viewMatrix;
-uniform vec3 cameraPosition;
 
 in vec3 vertexNormal;
 in vec2 vertexUV;
@@ -110,7 +100,10 @@ out vec4 fragColor;
 
 void main() {
   vec2 uv = fract(vertexUV * vec2(3.0, 3.0));
-	fragColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
-  // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+  vec4 texColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
+	vec3 debugNormal = normalize(vertexNormal) * 0.5 + 0.5;
+
+  // fragColor = texColor;
+  fragColor = vec4(debugNormal, 1.0);
 }
-`
+`;
