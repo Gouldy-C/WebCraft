@@ -272,17 +272,17 @@ export function greedyMesher(volume: Uint16Array, size: number) {
 }
 
 
-export function binaryGreedyMesher(voxelArray: Uint16Array, binaryArray: Uint32Array, size: number) {
+export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Array, size: number) {
   const packedVertice: number[] = []
 
-  const binaryAxisRows = generateBinaryAxisRows(binaryArray, size)
-  const crossAxisPlanes = generateCrossAxisPlanes(binaryAxisRows, size)
+  const throughAxisFaces = genThroughAxisFaces(binaryData, size)
+  const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
 
-  
+
 
 }
 
-function generateBinaryAxisRows(binaryVoxelArray: Uint32Array, chunkSize: number): Uint32Array {
+export function genThroughAxisFaces(binaryVoxelArray: Uint32Array, chunkSize: number): Uint32Array {
   const binaryAxisRows: Uint32Array = new Uint32Array(6 * chunkSize * chunkSize);
   for (let v = 0; v < chunkSize; v++) {
     for (let u = 0; u < chunkSize; u++) {
@@ -290,9 +290,9 @@ function generateBinaryAxisRows(binaryVoxelArray: Uint32Array, chunkSize: number
       const yBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize];
       const zBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize * 2];
 
-      const { NegFaces: xPos, PosFaces: xNeg } = posNegFaceAxisRows(xBinary);
-      const { NegFaces: yPos, PosFaces: yNeg } = posNegFaceAxisRows(yBinary); 
-      const { NegFaces: zPos, PosFaces: zNeg } = posNegFaceAxisRows(zBinary);
+      const { NegFaces: xPos, PosFaces: xNeg } = posNegFacesThroughAxis(xBinary);
+      const { NegFaces: yPos, PosFaces: yNeg } = posNegFacesThroughAxis(yBinary); 
+      const { NegFaces: zPos, PosFaces: zNeg } = posNegFacesThroughAxis(zBinary);
 
       binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 0] = xPos
       binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 1] = xNeg
@@ -300,13 +300,12 @@ function generateBinaryAxisRows(binaryVoxelArray: Uint32Array, chunkSize: number
       binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 3] = yNeg
       binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 4] = zPos
       binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 5] = zNeg
-
     }
   }
   return binaryAxisRows
 }
 
-function posNegFaceAxisRows(binaryRow: number) {
+function posNegFacesThroughAxis(binaryRow: number) {
   const NegShift = (binaryRow << 1) >>> 0;
   const PosShift = (binaryRow >>> 1) >>> 0;
 
@@ -336,17 +335,17 @@ function createAxis(chunkSize: number): BinaryPlanes {
   };
 }
 
-function generateCrossAxisPlanes(
+export function genCrossAxisFacePlanes(
   binaryAxisRows: Uint32Array,
   chunkSize: number
 ): BinaryPlanes {
   const planes: BinaryPlanes = createAxis(chunkSize);
   const axisOffset = chunkSize * chunkSize;
-  const axisArr: AxisDirs[] = ["xPos", "xNeg", "yPos", "yNeg", "zPos", "zNeg"]
+  const axisArr = Object.keys(planes) as AxisDirs[]
 
   // Process each axis
   for (let axis = 0; axis < axisArr.length; axis++) {
-    const direction = axisArr[axis].endsWith("Pos") ? 1 : -1;
+    const direction = axisArr[axis].endsWith("Pos") ? 1 : 0;
     const dataOffset = axis * axisOffset;
 
     for (let v = 0; v < chunkSize; v++) {
@@ -357,7 +356,7 @@ function generateCrossAxisPlanes(
         if (depthRow === 0) continue;
         if (direction) {
           for (let depth = 0; depth < chunkSize; depth++) {
-            const bitPos = 31 - depth; // MSB first for positive
+            const bitPos = 31 - depth;
             const mask = 1 << bitPos;
             if (mask & depthRow) {
               planes[axisArr[axis]][depth][v] |= 1 << u;
@@ -365,7 +364,7 @@ function generateCrossAxisPlanes(
           }
         } else {
           for (let depth = 0; depth < chunkSize; depth++) {
-            const bitPos = depth; // LSB first for negative
+            const bitPos = depth;
             const mask = 1 << bitPos;
             if (mask & depthRow) {
               planes[axisArr[axis]][depth][v] |= 1 << u;

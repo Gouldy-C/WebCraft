@@ -5,8 +5,7 @@ import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
 import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { binaryGreedyMesher, dirtDepth, getTerrainXYZ, greedyMesher, terrainHeight } from '../chunkGenFunctions';
-import { RowToPlaneSwizzler } from '../classes/RowToPlaneSwizzler';
+import { binaryGreedyMesher, dirtDepth, genCrossAxisFacePlanes, genThroughAxisFaces, getTerrainXYZ, terrainHeight } from '../chunkGenFunctions';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -95,6 +94,7 @@ function genVoxelData(message: WorkerPostMessage) {
   }
 
   let solidExternal = [true, true, true, true, true, true];
+  let voxelCount = 0;
 
   for (let z = 0; z < size; z++) {
     const zOffset = z * size;
@@ -122,6 +122,7 @@ function genVoxelData(message: WorkerPostMessage) {
         voxelData[index] = blockId;
   
         if (blockId !== BLOCKS.air.id) {
+          voxelCount++;
           binaryData[y + (z * size)] |= 1 << x;
           binaryData[x + (z * size) + (size * size)] |= 1 << z;
           binaryData[x + (y * size) + (size * size * 2)] |= 1 << y;
@@ -137,9 +138,11 @@ function genVoxelData(message: WorkerPostMessage) {
     }
   }
 
-  const planeSwizzler = new RowToPlaneSwizzler(size);
-  planeSwizzler.processFacesFromRows(binaryData);
-  console.log(planeSwizzler.visualizePlane("xPos", 0));
+  measureTime(() => {
+    const throughAxisFaces = genThroughAxisFaces(binaryData, size)
+    const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
+    return crossAxisPlanes
+  }, `genCrossAxisFacePlanes ${message.request.id}`);
 
   const returnData: WorkerPostMessage = {
     id: message.id,
