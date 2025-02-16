@@ -1,7 +1,7 @@
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import { RESOURCES } from "./blocks";
-import { Player } from "../components/unused/Player";
-import { World } from "../components/World";
+import { Player } from "../../../components/unused/Player";
+import { World } from "../../../components/World";
 
 export function createUi(world: World, player: Player) {
   const gui = new GUI();

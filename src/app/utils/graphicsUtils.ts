@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 
-export function _GetImageData(texture: THREE.Texture) {
+export function getImageData(texture: THREE.Texture) {
   const canvas = document.createElement('canvas');
   canvas.width = texture.image.width;
   canvas.height = texture.image.height;
@@ -13,7 +13,7 @@ export function _GetImageData(texture: THREE.Texture) {
   return context.getImageData(0, 0, texture.image.width, texture.image.height);
 }
 
-export function _GetPixel(imagedata: ImageData, x: number, y: number) {
+export function getPixel(imagedata: ImageData, x: number, y: number) {
   const position = (x + imagedata.width * y) * 4;
   const data = imagedata.data;
   return {

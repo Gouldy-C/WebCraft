@@ -1,16 +1,16 @@
-import { BLOCKS } from "../BlocksData";
-import { TerrainGenParams } from "../../components/TerrainManager";
-import { applyChunkDiffs } from "../chunkGenFunctions";
+import { BLOCKS } from "../../BlocksData";
+import { TerrainGenParams } from "../../../components/TerrainManager";
+import { applyChunkDiffs } from "../../chunkGenFunctions";
 import {
   coordsXYZFromKey,
   indexFromXYZCoords,
   keyFromXZCoords,
   lerp,
   measureTime,
-} from "../generalUtils";
-import { WorkerPostMessage } from "../classes/WorkerQueue";
+} from "../../generalUtils";
+import { WorkerPostMessage } from "../WorkerQueue";
 import { VoxelGenXYZ } from "../classes/VoxelGenXYZ";
-import { BitArray } from "../classes/unused/BitArray";
+import { BitArray } from "./BitArray";
 
 export interface ReturnVoxelData {
   chunkKey: string;
@@ -138,14 +138,14 @@ function getVoxelTypes(message: WorkerPostMessage) {
   const { chunkKey, params, diffs } = data;
   const voxelGenXYZ = new VoxelGenXYZ(params);
   const { x: chunkX, y: chunkY, z: chunkZ } = coordsXYZFromKey(chunkKey);
-  const size = params.chunkSize
-  const voxelData = new Uint8Array((size * size * size) + (size * size))
-  const binaryData = new BitArray(size * size)
+  const size = params.chunkSize;
+  const voxelData = new Uint8Array(size * size * size + size * size);
+  const binaryData = new BitArray(size * size);
   const gx = chunkX * (size - 2);
-  const gy = chunkY * size
+  const gy = chunkY * size;
   const gz = chunkZ * (size - 2);
-  const heightMap: Record<string, number> = {}
-  const sampleRate = 7
+  const heightMap: Record<string, number> = {};
+  const sampleRate = 7;
 
   for (let x = 0; x <= size; x += sampleRate) {
     for (let z = 0; z <= size; z += sampleRate) {
@@ -153,20 +153,21 @@ function getVoxelTypes(message: WorkerPostMessage) {
         x + gx,
         z + gz
       ).surfaceHeight;
-      heightMap[keyFromXZCoords(x, z)] = surfaceHeight
+      heightMap[keyFromXZCoords(x, z)] = surfaceHeight;
     }
   }
 
   for (let x = 0; x < size; x++) {
     const xLow = Math.floor(x / sampleRate) * sampleRate;
     const xHigh = xLow + sampleRate >= size - 1 ? size - 1 : xLow + sampleRate;
-    const xPercent = 1 / sampleRate * (x % sampleRate)
-    
+    const xPercent = (1 / sampleRate) * (x % sampleRate);
+
     for (let z = 0; z < size; z++) {
-      if (x % sampleRate === 0 && z % sampleRate === 0) continue
+      if (x % sampleRate === 0 && z % sampleRate === 0) continue;
       const zLow = Math.floor(z / sampleRate) * sampleRate;
-      const zHigh = zLow + sampleRate >= size - 1 ? size - 1 : zLow + sampleRate;
-      const zPercent = 1 / sampleRate * (z % sampleRate)
+      const zHigh =
+        zLow + sampleRate >= size - 1 ? size - 1 : zLow + sampleRate;
+      const zPercent = (1 / sampleRate) * (z % sampleRate);
 
       const xHeightLow = heightMap[keyFromXZCoords(xLow, z)];
       const xHeightHigh = heightMap[keyFromXZCoords(xHigh, z)];
@@ -175,7 +176,7 @@ function getVoxelTypes(message: WorkerPostMessage) {
       const zHeightLow = heightMap[keyFromXZCoords(x, zLow)];
       const zHeightHigh = heightMap[keyFromXZCoords(x, zHigh)];
       const zLerp = lerp(zPercent, zHeightLow, zHeightHigh);
-      
+
       heightMap[keyFromXZCoords(x, z)] = Math.floor((xLerp + zLerp) / 2);
     }
   }
@@ -184,13 +185,13 @@ function getVoxelTypes(message: WorkerPostMessage) {
     for (let x = 0; x < size; x++) {
       for (let z = 0; z < size; z++) {
         const surfaceHeight = heightMap[keyFromXZCoords(x, z)];
-        const heightIndex = x + (z * size) + (size * size * size)
+        const heightIndex = x + z * size + size * size * size;
         voxelData[heightIndex] = surfaceHeight;
         const i = indexFromXYZCoords(x, y, z, size);
         if (voxelData[i] !== 0) continue;
         const voxel: number = voxelGenXYZ.getBlockIdXYZ(x + gx, y + gy, z + gz);
         if (!voxel) continue;
-        binaryData.setBit(x + (y * size));
+        binaryData.setBit(x + y * size);
         voxelData[i] = voxel;
       }
     }
@@ -203,7 +204,7 @@ function getVoxelTypes(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'voxelData',
+      type: "voxelData",
       data: {
         chunkKey,
         voxelDataBuffer: voxelData.buffer,
@@ -222,12 +223,10 @@ function processGeometryData(message: WorkerPostMessage) {
   const worldHeight = params.worldHeight;
   const height = params.worldHeight;
 
-
   let positions = [];
   let normals = [];
   let indices = [];
   let voxelData: Uint16Array | null = new Uint16Array(voxelDataBuffer);
-
 
   for (let z = 1; z < size - 1; z++) {
     for (let x = 1; x < size - 1; x++) {
@@ -348,7 +347,7 @@ function processGeometryData(message: WorkerPostMessage) {
     workerId,
     request: {
       id: message.id,
-      type: 'meshData',
+      type: "meshData",
       data: {
         chunkKey,
         positionsBuffer: positionsBuffer.buffer,

@@ -7,7 +7,7 @@ import {
   worldToChunkCoords,
 } from "../../utils/generalUtils";
 import { WorkerObj, WorkerQueue } from "../../utils/classes/WorkerQueue";
-import { ReturnVoxelData } from "../../utils/workers/genVoxelData";
+import { ReturnVoxelData } from "../../utils/classes/unused/genVoxelData";
 import { VoxelGenXYZ } from "../../utils/classes/VoxelGenXYZ";
 
 interface RequestData extends WorkerObj {
