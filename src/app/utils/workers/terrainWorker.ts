@@ -123,9 +123,9 @@ function genVoxelData(message: WorkerPostMessage) {
   
         if (blockId !== BLOCKS.air.id) {
           voxelCount++;
-          binaryData[y + (z * size)] |= 1 << x;
-          binaryData[x + (z * size) + (size * size)] |= 1 << z;
-          binaryData[x + (y * size) + (size * size * 2)] |= 1 << y;
+          binaryData[y + (z * size) + (size * size * 0)] |= 1 << x;
+          binaryData[x + (z * size) + (size * size * 1)] |= 1 << y;
+          binaryData[x + (y * size) + (size * size * 2)] |= 1 << z;
         } else {
           if (x === size - 1) solidExternal[0] = false;
           if (x === 0) solidExternal[1] = false;
