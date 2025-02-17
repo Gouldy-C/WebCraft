@@ -8,6 +8,8 @@ uniform sampler2D uTextureConfig; // X: numTextures , Y: startIndex in the textu
 out vec3 vertexNormal;
 out vec2 vertexUV;
 out float textureIndex;
+out float quadWidth;
+out float quadHeight;
 
 vec3 decodeNormal(uint normalBits) {
   switch(normalBits) {
@@ -69,17 +71,21 @@ float getTextureIndex(float blockId, vec3 normal) {
 }
 
 void main() {
-  float x = float(uint(position.x) & 0x1Fu);
-  float y = float(uint(position.x) >> 5 & 0x1Fu);
-  float z = float(uint(position.x) >> 10 & 0x1Fu);
-  uint normalIndex = uint(position.x) >> 15 & 0x7u;
-  uint UVIndex = uint(position.x) >> 18 & 0x3u;
+  float x = float(uint(position.x) & 0x3Fu);
+  float y = float(uint(position.x) >> 6 & 0x3Fu);
+  float z = float(uint(position.x) >> 12 & 0x3Fu);
+  uint normalIndex = uint(position.x) >> 18 & 0x7u;
+  uint UVIndex = uint(position.x) >> 21 & 0x3u;
 
   float blockId = float(uint(position.y) & 0xFFFu);
+  float width = float(uint(position.y) >> 12 & 0x1Fu);
+  float height = float(uint(position.y) >> 17 & 0x1Fu);
   
   vertexNormal = decodeNormal(normalIndex);
   vertexUV = decodeUVCoords(UVIndex);
   textureIndex = getTextureIndex(blockId, vertexNormal);
+  quadWidth = width;
+  quadHeight = height;
 
   vec3 pos = vec3(x, y, z);
   gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( pos, 1.0 );
@@ -95,15 +101,17 @@ uniform sampler2DArray uTextureArray;
 in vec3 vertexNormal;
 in vec2 vertexUV;
 in float textureIndex;
+in float quadWidth;
+in float quadHeight;
 
 out vec4 fragColor;
 
 void main() {
-  vec2 uv = fract(vertexUV * vec2(3.0, 3.0));
-  vec4 texColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
-	vec3 debugNormal = normalize(vertexNormal) * 0.5 + 0.5;
-
+  vec2 uv = fract(vertexUV * vec2(quadWidth + 1.0, quadHeight + 1.0));
+  vec4 texColor = texture(uTextureArray, vec3(uv, textureIndex));
   fragColor = texColor;
+
+	// vec3 debugNormal = normalize(vertexNormal) * 0.5 + 0.5;
   // fragColor = vec4(debugNormal, 1.0);
 }
 `;

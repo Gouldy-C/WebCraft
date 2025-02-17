@@ -27,10 +27,6 @@ export class Chunk {
   blockData: Uint16Array
   mesh: THREE.Mesh | null = null
 
-  // vertexData(x): 9 unused bits | 2 uv | 3 normal | 6 z | 6 y | 6 x
-  // (0 << 21) | (this.normal << 18) | (0 << 12)| (0 << 6) | 0
-  // blockData(y):  21 unused bits | 11 block id
-  // blockData(z):  unused
 
   constructor(terrainManager: TerrainManager, id: string) {
     this.terrainManager = terrainManager
@@ -109,7 +105,7 @@ export class Chunk {
     if (type === "genChunkVoxelData") {
       this.blockData = new Uint16Array(data.voxelDataBuffer);
       this.binaryData = new Uint32Array(data.binaryDataBuffer)
-      this.generateMesh();
+      if (data.voxelCount > 0)this.generateMesh();
     }
     if (type === "genChunkMeshData") {
       this._processMeshData(data.verticesBuffer);

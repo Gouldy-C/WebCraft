@@ -16,6 +16,7 @@ import { Chunk } from "./Chunk";
 import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
+import { getQuadPoints, packVertices } from "../utils/chunkGenFunctions";
 
 export interface TerrainGenParams {
   seed: string;
@@ -76,79 +77,81 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
 
     this._init();
-    const blockId = 1
+    const blockId = 2
     const vertices = [];
+    const points = getQuadPoints(2, 0, 0, 0, 0, 5, 5)
+    console.log(points)
+    const packed = packVertices(points, blockId, 2, 0, 5, 5)
+    vertices.push(...packed)
 
     // Helper function to encode vertex data
-    function encodeVertex(x: number, y: number, z: number, uv: number, normal: number) {
-      return (2 << 23) | (uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x;
-    }
+    // function encodeVertex(x: number, y: number, z: number, uv: number, normal: number) {
+    //   return ((uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x) >>> 0;
+    // }
 
-    // Front face
-    vertices.push(
-      encodeVertex(5, 5, 0, 0, 4), blockId, 0,
-      encodeVertex(5, 0, 0, 3, 4), blockId, 0,
-      encodeVertex(0, 0, 0, 2, 4), blockId, 0,
-      encodeVertex(5, 5, 0, 0, 4), blockId, 0,
-      encodeVertex(0, 0, 0, 2, 4), blockId, 0,
-      encodeVertex(0, 5, 0, 1, 4), blockId, 0
-    );
+    // // Front face
+    // vertices.push(
+    //   encodeVertex(5, 0, 0, 0, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 0, 1, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 0, 2, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 0, 0, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 0, 2, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 0, 3, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    // );
 
-    // Back face
-    vertices.push(
-      encodeVertex(0, 0, 5, 3, 5), blockId, 0,
-      encodeVertex(5, 0, 5, 2, 5), blockId, 0,
-      encodeVertex(5, 5, 5, 1, 5), blockId, 0,
-      encodeVertex(0, 0, 5, 3, 5), blockId, 0,
-      encodeVertex(5, 5, 5, 1, 5), blockId, 0,
-      encodeVertex(0, 5, 5, 0, 5), blockId, 0
-    );
+    // // Back face
+    // vertices.push(
+    //   encodeVertex(0, 0, 5, 3, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 5, 2, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 5, 1, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 5, 3, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 5, 1, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 5, 0, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0
+    // );
 
-    // Left face
-    vertices.push(
-      encodeVertex(0, 5, 0, 0, 1), blockId, 0,
-      encodeVertex(0, 0, 0, 3, 1), blockId, 0,
-      encodeVertex(0, 5, 5, 1, 1), blockId, 0,
-      encodeVertex(0, 0, 0, 3, 1), blockId, 0,
-      encodeVertex(0, 0, 5, 2, 1), blockId, 0,
-      encodeVertex(0, 5, 5, 1, 1), blockId, 0,
-    );
+    // // Left face
+    // vertices.push(
+    //   encodeVertex(0, 5, 0, 0, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 0, 3, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 5, 1, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 0, 3, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 5, 2, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 5, 1, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    // );
 
-    // Right face
-    vertices.push(
-      encodeVertex(5, 5, 5, 0, 0), blockId, 0,
-      encodeVertex(5, 0, 5, 3, 0), blockId, 0,
-      encodeVertex(5, 0, 0, 2, 0), blockId, 0,
-      encodeVertex(5, 5, 5, 0, 0), blockId, 0,
-      encodeVertex(5, 0, 0, 2, 0), blockId, 0,
-      encodeVertex(5, 5, 0, 1, 0), blockId, 0,
-    );
+    // // Right face
+    // vertices.push(
+    //   encodeVertex(5, 5, 5, 0, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 5, 3, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 0, 2, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 5, 0, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 0, 2, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 0, 1, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    // );
 
-    // Top face
-    vertices.push(
-      encodeVertex(0, 5, 0, 2, 2), blockId, 0,
-      encodeVertex(0, 5, 5, 3, 2), blockId, 0,
-      encodeVertex(5, 5, 5, 0, 2), blockId, 0,
-      encodeVertex(0, 5, 0, 2, 2), blockId, 0,
-      encodeVertex(5, 5, 5, 0, 2), blockId, 0,
-      encodeVertex(5, 5, 0, 1, 2), blockId, 0,
-    );
+    // // Top face
+    // vertices.push(
+    //   encodeVertex(0, 5, 0, 2, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 5, 3, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 5, 0, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 5, 0, 2, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 5, 0, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 5, 0, 1, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    // );
 
-    // Bottom face
-    vertices.push(
-      encodeVertex(5, 0, 0, 1, 3), blockId, 0,
-      encodeVertex(5, 0, 5, 2, 3), blockId, 0,
-      encodeVertex(0, 0, 0, 0, 3), blockId, 0,
-      encodeVertex(0, 0, 0, 0, 3), blockId, 0,
-      encodeVertex(5, 0, 5, 2, 3), blockId, 0,
-      encodeVertex(0, 0, 5, 3, 3), blockId, 0
-    );
+    // // Bottom face
+    // vertices.push(
+    //   encodeVertex(5, 0, 0, 1, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 5, 2, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 0, 0, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 0, 0, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(5, 0, 5, 2, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
+    //   encodeVertex(0, 0, 5, 3, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0
+    // );
 
 
 
     const verticesData = new Float32Array(vertices);
-    const test = (verticesData[0] << 23) >>> 23
-    console.log(test.toString(2));
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
     const bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute('position', bufferAttribute)

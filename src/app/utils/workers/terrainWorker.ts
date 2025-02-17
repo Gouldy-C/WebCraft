@@ -26,8 +26,8 @@ self.onmessage = (e: MessageEvent) => {
     genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    genMeshData(e.data)
+    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    // genMeshData(e.data)
   }
 };
 
@@ -138,21 +138,16 @@ function genVoxelData(message: WorkerPostMessage) {
     }
   }
 
-  // measureTime(() => {
-  //   const throughAxisFaces = genThroughAxisFaces(binaryData, size)
-  //   const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
-  //   return crossAxisPlanes
-  // }, `genCrossAxisFacePlanes ${message.request.id}`);
-
   const returnData: WorkerPostMessage = {
     id: message.id,
     workerId,
     request: {
       id: message.id,
-      type: 'genChunkVoxel',
+      type: 'genChunkVoxelData',
       data: {
         chunkKey,
         solidExternal,
+        voxelCount,
         voxelDataBuffer: voxelData.buffer,
         binaryDataBuffer: binaryData.buffer,
       },

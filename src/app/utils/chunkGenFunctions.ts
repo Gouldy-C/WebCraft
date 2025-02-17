@@ -236,115 +236,118 @@ export function getTerrainXYZ(
 //   }
 // }
 
-export function greedyMesher(volume: Uint16Array, size: number) {
-  let mask = new Int32Array(size * size);
+// export function greedyMesher(volume: Uint16Array, size: number) {
+//   let mask = new Int32Array(size * size);
   
-  const vertices: number[] = [];
-  for(let axis = 0; axis < 3; ++axis) {
-    let x, y, w
-    let length, width, height
-    const altAxis1 = (axis + 1) % 3
-    const altAxis2 = (axis + 2) % 3
-    const dIndex = [0,0,0]
+//   const vertices: number[] = [];
+//   for(let axis = 0; axis < 3; ++axis) {
+//     let x, y, w
+//     let length, width, height
+//     const altAxis1 = (axis + 1) % 3
+//     const altAxis2 = (axis + 2) % 3
+//     const dIndex = [0,0,0]
 
-    const step = [0,0,0];
-    step[axis] = 1;
+//     const step = [0,0,0];
+//     step[axis] = 1;
 
-    // mask = new Int32Array(size * size)
+//     // mask = new Int32Array(size * size)
 
-    for(dIndex[axis] = -1; dIndex[axis] < size; ) {
-      let maskIndex = 0;
+//     for(dIndex[axis] = -1; dIndex[axis] < size; ) {
+//       let maskIndex = 0;
 
-      for(dIndex[altAxis2] = 0; dIndex[altAxis2] < size; dIndex[altAxis2]++) {
-        for(dIndex[altAxis1] = 0; dIndex[altAxis1] < size; dIndex[altAxis1]++, maskIndex++) {
-          let voxel1 = (0 <= dIndex[axis] ? volume[indexFromXYZCoords(dIndex[0], dIndex[1], dIndex[2], size)] : 0)
-          const v2Pos = [dIndex[0] + step[0], dIndex[1] + step[1], dIndex[2] + step[2]]
-          let voxel2 = (dIndex[axis] <  size ? volume[indexFromXYZCoords(v2Pos[0], v2Pos[1], v2Pos[2], size)] : 0);
-          if((voxel1 !== 0) === (voxel2 !== 0) ) {
-            mask[maskIndex] = 0;
-          }
-          else if(!!voxel1) {
-            mask[maskIndex] = voxel1;
-          }
-          else {
-            mask[maskIndex] = -voxel2;
-          }
-        }
-      }
+//       for(dIndex[altAxis2] = 0; dIndex[altAxis2] < size; dIndex[altAxis2]++) {
+//         for(dIndex[altAxis1] = 0; dIndex[altAxis1] < size; dIndex[altAxis1]++, maskIndex++) {
+//           let voxel1 = (0 <= dIndex[axis] ? volume[indexFromXYZCoords(dIndex[0], dIndex[1], dIndex[2], size)] : 0)
+//           const v2Pos = [dIndex[0] + step[0], dIndex[1] + step[1], dIndex[2] + step[2]]
+//           let voxel2 = (dIndex[axis] <  size ? volume[indexFromXYZCoords(v2Pos[0], v2Pos[1], v2Pos[2], size)] : 0);
+//           if((voxel1 !== 0) === (voxel2 !== 0) ) {
+//             mask[maskIndex] = 0;
+//           }
+//           else if(!!voxel1) {
+//             mask[maskIndex] = voxel1;
+//           }
+//           else {
+//             mask[maskIndex] = -voxel2;
+//           }
+//         }
+//       }
 
-      dIndex[axis]++;
-      maskIndex = 0;
+//       dIndex[axis]++;
+//       maskIndex = 0;
 
-      for(y = 0; y < size; y++) {
-        for(x = 0; x < size;) {
-          let voxelType = mask[maskIndex];
-          if(!!voxelType) {
-            for(width = 1; voxelType === mask[maskIndex + width] && x + width < size; width++) {}
+//       for(y = 0; y < size; y++) {
+//         for(x = 0; x < size;) {
+//           let voxelType = mask[maskIndex];
+//           if(!!voxelType) {
+//             for(width = 1; voxelType === mask[maskIndex + width] && x + width < size; width++) {}
             
-            let done = false;
-            for(height = 1; y + height < size; height++) {
-              for(w = 0; w < width; w++) {
-                if(voxelType !== mask[maskIndex + w + height * size]) {
-                  done = true;
-                  break;
-                }
-              }
-              if(done) {
-                break;
-              }
-            }
+//             let done = false;
+//             for(height = 1; y + height < size; height++) {
+//               for(w = 0; w < width; w++) {
+//                 if(voxelType !== mask[maskIndex + w + height * size]) {
+//                   done = true;
+//                   break;
+//                 }
+//               }
+//               if(done) {
+//                 break;
+//               }
+//             }
 
-            dIndex[altAxis1] = x;  dIndex[altAxis2] = y;
-            let du = [0,0,0]
-            let dv = [0,0,0]; 
-            let normal
-            let uv
-            if(voxelType > 0) {
-              normal = axis * 2
-              uv = [1, 2, 3, 1, 3, 0]
-              dv[altAxis2] = height;
-              du[altAxis1] = width;
-            } else {
-              normal = axis * 2 + 1
-              uv = [1, 3, 0, 1, 2, 3]
-              voxelType = -voxelType
-              du[altAxis2] = height;
-              dv[altAxis1] = width;
-            }
+//             dIndex[altAxis1] = x;  dIndex[altAxis2] = y;
+//             let du = [0,0,0]
+//             let dv = [0,0,0]; 
+//             let normal
+//             let uv
+//             if(voxelType > 0) {
+//               normal = axis * 2
+//               uv = [1, 2, 3, 1, 3, 0]
+//               dv[altAxis2] = height;
+//               du[altAxis1] = width;
+//             } else {
+//               normal = axis * 2 + 1
+//               uv = [1, 3, 0, 1, 2, 3]
+//               voxelType = -voxelType
+//               du[altAxis2] = height;
+//               dv[altAxis1] = width;
+//             }
 
-            const vPosA = [dIndex[0], dIndex[1], dIndex[2]]
-            const vPosB = [dIndex[0] + du[0], dIndex[1] + du[1], dIndex[2] + du[2]]
-            const vPosC = [dIndex[0] + du[0] + dv[0], dIndex[1] + du[1] + dv[1], dIndex[2] + du[2] + dv[2]]
-            const vPosD = [dIndex[0] + dv[0], dIndex[1] + dv[1], dIndex[2] + dv[2]]
-            const points = [vPosA, vPosB, vPosC, vPosA, vPosC, vPosD]
+//             const vPosA = [dIndex[0], dIndex[1], dIndex[2]]
+//             const vPosB = [dIndex[0] + du[0], dIndex[1] + du[1], dIndex[2] + du[2]]
+//             const vPosC = [dIndex[0] + du[0] + dv[0], dIndex[1] + du[1] + dv[1], dIndex[2] + du[2] + dv[2]]
+//             const vPosD = [dIndex[0] + dv[0], dIndex[1] + dv[1], dIndex[2] + dv[2]]
+//             const points = [vPosA, vPosB, vPosC, vPosA, vPosC, vPosD]
 
-            // vertexData(x):  5 height | 5 width | 2 uv | 3 normal | 5 z | 5 y | 5 x
-            // (height << 26) | (width << 20) | (uv << 18) | (normal << 15) | (z << 10)| (y << 5) | x
-            // blockData(y):  20 unused bits | 12 block id
-            // blockData(z):  unused
+//             // vertexData(x):  5 height | 5 width | 2 uv | 3 normal | 5 z | 5 y | 5 x
+//             // (height << 26) | (width << 20) | (uv << 18) | (normal << 15) | (z << 10)| (y << 5) | x
+//             // blockData(y):  20 unused bits | 12 block id
+//             // blockData(z):  unused
 
-            for (let v = 0; v < 6; v++) {
-              const packedX = (uv[v] << 18) | (normal << 15) | (points[v][2] << 10) | (points[v][1] << 5) | points[v][0];
-              const packedY = voxelType 
-              const packedZ = 0
-              vertices.push(packedX, packedY, packedZ)
-            }
+//             for (let v = 0; v < 6; v++) {
+//               const packedX = (uv[v] << 18) | (normal << 15) | (points[v][2] << 10) | (points[v][1] << 5) | points[v][0];
+//               const packedY = voxelType 
+//               const packedZ = 0
+//               vertices.push(packedX, packedY, packedZ)
+//             }
 
-            for(length = 0; length < height; length++) {
-              for(w = 0; w < width; w++) {
-                mask[maskIndex + w + length * size] = 0;
-              }
-            }
+//             for(length = 0; length < height; length++) {
+//               for(w = 0; w < width; w++) {
+//                 mask[maskIndex + w + length * size] = 0;
+//               }
+//             }
 
-            x += width; maskIndex += width;
-          } else {
-            x++;    maskIndex++;
-          }
-        }
-      }
-    }
-  }
-  return vertices;
+//             x += width; maskIndex += width;
+//           } else {
+//             x++;    maskIndex++;
+//           }
+//         }
+//       }
+//     }
+//   }
+//   return vertices;
+// }
+export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, size: number) {
+
 }
 
 
@@ -375,7 +378,7 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
           if (!bit && !quadMask) continue
           let index = 0
           if (axisIndex === 0) {
-            index = indexFromXYZCoords(depth, u, v, size)
+            index = indexFromXYZCoords(depth, v, u, size)
           }
           if (axisIndex === 1) {
             index = indexFromXYZCoords(u, depth, v, size)
@@ -396,9 +399,9 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
                 plane[h] = plane[h] & ((~quadMask) >>> 0);
               }
               else {
-                const vertices = getQuadPoints(axisIndex, direction, depth, u - width, v, width, height)
-                //add quad to the verticies based on width and height and query voxel type from voxel array
-
+                const vertices = getQuadPoints(axisIndex, direction, depth, u - width, v, width - 1, height - 1)
+                const packedQuad = packVertices(vertices, voxelType, axisIndex, direction, width - 1, height - 1)
+                packedVertices.push(...packedQuad)
                 width = 0
                 height = 0
                 quadMask = 0
@@ -418,21 +421,25 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
   return packedVertices;
 }
 
-function getQuadPoints(axisIndex: number, direction: number, depth: number, u: number, v: number, width: number, height: number) {
+export function getQuadPoints(axisIndex: number, direction: number, depth: number, u: number, v: number, width: number, height: number) {
   const points: number[][] = []
-  const offsets = direction ? [[width, 0,], [0, 0], [0, height], [width, height]] : [[0, 0], [width, 0], [0, height], [width, height]]
-
+  const offsets = direction 
+    ? [[0, 0], [0, height], [width, height], [width, 0]] 
+    : [[0, height], [0, 0], [width, 0], [width, height]] 
+    
   for (let i = 0; i < 4; i++) {
     let x = 0, y = 0, z = 0
     if (axisIndex === 0) {
       x = depth + direction
-      y = u + offsets[i][0]
-      z = v + offsets[i][1]
-    } else if (axisIndex === 1) {
+      y = u + offsets[i][1]
+      z = v + offsets[i][0] 
+    }
+    if (axisIndex === 1) {
       x = u + offsets[i][0]
       y = depth + direction
       z = v + offsets[i][1]
-    } else if (axisIndex === 2) {
+    }
+    if (axisIndex === 2) {
       x = u + offsets[i][0]
       y = v + offsets[i][1]
       z = depth + direction
@@ -443,30 +450,48 @@ function getQuadPoints(axisIndex: number, direction: number, depth: number, u: n
   return points
 }
 
-function packedVertices(verticies: number[][], voxelType: number, axis: number, direction: number, width: number, height: number) {
-  const packedVertices: number[] = []
-  const normal = axis * 2 + direction
+export function packVertices(vertices: number[][], voxelType: number, axisIndex: number, direction: number, width: number, height: number) {
+  const packedVertices: number[][] = []
+  const packedQuad: number[] = []
+  const normal = direction ? axisIndex * 2 : axisIndex * 2 + 1
+  const vertexOrder = [0, 1, 2, 0, 2, 3]
+
   // x = (uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x
+  // y =  (height << 17) | (width << 12) | blockId
+  // z = unused
+
+  for (let i = 0; i < 4; i++) {
+    const [x, y, z] = vertices[i]
+    const uv = i
+    const packedX = ((uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x) >>> 0
+    const packedY = ((height << 17) | (width << 12) | voxelType) >>> 0
+    const packedZ = 0
+    packedVertices.push([packedX, packedY, packedZ])
+  }
+  for (let i = 0; i < 6; i++) {
+    packedQuad.push(...packedVertices[vertexOrder[i]])
+  }
+  return packedQuad
 }
 
 export function genThroughAxisFaces(binaryVoxelArray: Uint32Array, chunkSize: number): Uint32Array {
-  const binaryAxisRows: Uint32Array = new Uint32Array(6 * chunkSize * chunkSize);
+  const binaryAxisRows = new Uint32Array(chunkSize * chunkSize * 6)
   for (let v = 0; v < chunkSize; v++) {
     for (let u = 0; u < chunkSize; u++) {
       const xBinary = binaryVoxelArray[u + v * chunkSize];
       const yBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize];
       const zBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize * 2];
 
-      const { NegFaces: xPos, PosFaces: xNeg } = posNegFacesThroughAxis(xBinary);
-      const { NegFaces: yPos, PosFaces: yNeg } = posNegFacesThroughAxis(yBinary); 
-      const { NegFaces: zPos, PosFaces: zNeg } = posNegFacesThroughAxis(zBinary);
+      const { PosFaces: xPos, NegFaces: xNeg } = posNegFacesThroughAxis(xBinary);
+      const { PosFaces: yPos, NegFaces: yNeg } = posNegFacesThroughAxis(yBinary); 
+      const { PosFaces: zPos, NegFaces: zNeg } = posNegFacesThroughAxis(zBinary);
 
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 0] = xPos
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 1] = xNeg
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 2] = yPos
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 3] = yNeg
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 4] = zPos
-      binaryAxisRows[u + v * chunkSize + chunkSize * chunkSize * 5] = zNeg
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 0)] = xPos
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 1)] = xNeg
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 2)] = yPos
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 3)] = yNeg
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 4)] = zPos
+      binaryAxisRows[u + v * chunkSize + (chunkSize * chunkSize * 5)] = zNeg
     }
   }
   return binaryAxisRows
