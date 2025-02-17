@@ -357,10 +357,9 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
   const throughAxisFaces = genThroughAxisFaces(binaryData, size)
   const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
 
-  for (const [axisKey, planes] of Object.entries(crossAxisPlanes)) {
-    const axis = axisKey[0]
-    const direction = axisKey.endsWith("Pos") ? 1 : 0
-    const axisIndex = ["x", "y", "z"].indexOf(axis)
+  for (const [index, planes] of crossAxisPlanes.entries()) {
+    const axis = Math.floor(index / 2)
+    const direction = index % 2 === 0 ? 1 : 0
 
 
     for (let depth = 0; depth < size; depth++) {
@@ -371,68 +370,106 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
         let width = 0
         let height = 0
         let quadMask = 0
-        let voxelType = 0
+        let voxelType = 1
 
         for (let u = 0; u < size; u++) {
           const bit = binary & (1 << u)
           if (!bit && !quadMask) continue
           let index = 0
-          if (axisIndex === 0) {
-            index = indexFromXYZCoords(depth, v, u, size)
+          if (axis === 0) {
+            index = depth + v * size + (u * size * size);
           }
-          if (axisIndex === 1) {
-            index = indexFromXYZCoords(u, depth, v, size)
+          if (axis === 1) {
+            index = u + depth * size + (v * size * size);
           }
-          if (axisIndex === 2) {
-            index = indexFromXYZCoords(u, v, depth, size)
+          if (axis === 2) {
+            index = u + v * size + (depth * size * size);
           }
           const newVoxelType = voxelArray[index]
 
           const reachedAir = !bit && quadMask
           const voxelSame = newVoxelType === voxelType
 
-          if (reachedAir || (!voxelSame && quadMask)) {
+          if (reachedAir || (!voxelSame && quadMask) || (u === size - 1 && quadMask)) {
+            const startU = u - width;
+            const endU = u - (reachedAir ? 1 : 0);
+            
             for (let h = v; h < size; h++) {
-              const bitMask = plane[h] & quadMask
+              const bitMask = plane[h] & quadMask;
               if (bitMask === quadMask) {
-                height++;
-                plane[h] = plane[h] & ((~quadMask) >>> 0);
-              }
-              else {
-                const vertices = getQuadPoints(axisIndex, direction, depth, u - width, v, width - 1, height - 1)
-                const packedQuad = packVertices(vertices, voxelType, axisIndex, direction, width - 1, height - 1)
-                packedVertices.push(...packedQuad)
-                width = 0
-                height = 0
-                quadMask = 0
-                break
+                let typesMatch = true;
+                for (let checkU = startU; checkU <= endU; checkU++) {
+                  let index = 0;
+                  if (axis === 0) index = depth + h * size + (checkU * size * size);
+                  if (axis === 1) index = checkU + depth * size + (h * size * size);
+                  if (axis === 2) index = checkU + h * size + (depth * size * size);
+                  
+                  if (voxelArray[index] !== voxelType) {
+                    typesMatch = false;
+                    break;
+                  }
+                }
+                
+                if (typesMatch) {
+                  height++;
+                  plane[h] = plane[h] & ((~quadMask) >>> 0);
+                } else {
+                  break;
+                }
+              } else {
+                break;
               }
             }
+            
+            if (width > 0 && height > 0) {
+              const vertices = getQuadPoints(axis, direction, depth, startU, v, width, height);
+              const packedQuad = packVertices(vertices, voxelType, axis, direction, width - 1, height - 1);
+              packedVertices.push(...packedQuad);
+            }
+            
+            width = 0;
+            height = 0;
+            quadMask = 0;
           }
           if (bit) {
             voxelType = newVoxelType
             quadMask |= 1 << u
-            width++
+            width++;
           }
         }
       }
     }
   }
+  packedVertices.push(0, 0, 0)
   return packedVertices;
 }
 
 export function getQuadPoints(axisIndex: number, direction: number, depth: number, u: number, v: number, width: number, height: number) {
   const points: number[][] = []
-  const offsets = direction 
-    ? [[0, 0], [0, height], [width, height], [width, 0]] 
-    : [[0, height], [0, 0], [width, 0], [width, height]] 
+  const offsets = ((axisIndex: number, direction: number) =>{
+    if (axisIndex === 0) {
+      return direction 
+        ? [[width, 0], [0, 0], [0, height], [width, height]] // pos x
+        : [[0, 0], [width, 0], [width, height], [0, height]] // neg x
+    }
+    else if (axisIndex === 1) {
+      return direction 
+        ? [[0, 0], [0, height], [width, height], [width, 0]] // pos y
+        : [[0, height], [0, 0], [width, 0], [width, height]] // neg y
+    }
+    else {
+      return direction 
+        ? [[0, 0], [width, 0], [width, height], [0, height]] // pos z
+        : [[width, 0], [0, 0], [0, height], [width, height]] // neg z
+    }
+  })(axisIndex, direction)
     
   for (let i = 0; i < 4; i++) {
     let x = 0, y = 0, z = 0
     if (axisIndex === 0) {
       x = depth + direction
-      y = u + offsets[i][1]
-      z = v + offsets[i][0] 
+      y = v + offsets[i][1] 
+      z = u + offsets[i][0]
     }
     if (axisIndex === 1) {
       x = u + offsets[i][0]
@@ -478,9 +515,9 @@ export function genThroughAxisFaces(binaryVoxelArray: Uint32Array, chunkSize: nu
   const binaryAxisRows = new Uint32Array(chunkSize * chunkSize * 6)
   for (let v = 0; v < chunkSize; v++) {
     for (let u = 0; u < chunkSize; u++) {
-      const xBinary = binaryVoxelArray[u + v * chunkSize];
-      const yBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize];
-      const zBinary = binaryVoxelArray[u + v * chunkSize + chunkSize * chunkSize * 2];
+      const xBinary = binaryVoxelArray[u + v * chunkSize + (chunkSize * chunkSize * 0)];
+      const yBinary = binaryVoxelArray[u + v * chunkSize + (chunkSize * chunkSize * 1)];
+      const zBinary = binaryVoxelArray[u + v * chunkSize + (chunkSize * chunkSize * 2)];
 
       const { PosFaces: xPos, NegFaces: xNeg } = posNegFacesThroughAxis(xBinary);
       const { PosFaces: yPos, NegFaces: yNeg } = posNegFacesThroughAxis(yBinary); 
@@ -510,34 +547,26 @@ function posNegFacesThroughAxis(binaryRow: number) {
   return { PosFaces, NegFaces };
 }
 
-type AxisDirs = "xPos" | "xNeg" | "yPos" | "yNeg" | "zPos" | "zNeg"
-
-type BinaryPlanes = {
-  [key in AxisDirs]: Uint32Array[]
-}
-
-function createAxis(chunkSize: number): BinaryPlanes {
-  return {
-    xPos: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-    xNeg: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-    yPos: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-    yNeg: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-    zPos: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-    zNeg: Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
-  };
+function createAxis(chunkSize: number): Uint32Array[][] {
+  return [
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+    Array.from({ length: chunkSize }, () => new Uint32Array(chunkSize)),
+  ]
 }
 
 export function genCrossAxisFacePlanes(
   binaryAxisRows: Uint32Array,
   chunkSize: number
-): BinaryPlanes {
-  const planes: BinaryPlanes = createAxis(chunkSize);
+): Uint32Array[][] {
+  const planes: Uint32Array[][] = createAxis(chunkSize);
   const axisOffset = chunkSize * chunkSize;
-  const axisArr = Object.keys(planes) as AxisDirs[]
 
-  // Process each axis
-  for (let axis = 0; axis < axisArr.length; axis++) {
-    const direction = axisArr[axis].endsWith("Pos") ? 1 : 0;
+  for (let axis = 0; axis < 6; axis++) {
+    const direction = axis % 2 === 0 ? 1 : 0;
     const dataOffset = axis * axisOffset;
 
     for (let v = 0; v < chunkSize; v++) {
@@ -549,17 +578,19 @@ export function genCrossAxisFacePlanes(
         if (direction) {
           for (let depth = 0; depth < chunkSize; depth++) {
             const bitPos = 31 - depth;
-            const mask = 1 << bitPos;
-            if (mask & depthRow) {
-              planes[axisArr[axis]][depth][v] |= 1 << u;
+            const mask = (1 << bitPos) >>> 0;
+            const check = (mask & depthRow) >>> 0;
+            if (check) {
+              planes[axis][depth][v] |= 1 << u;
             }
           }
         } else {
           for (let depth = 0; depth < chunkSize; depth++) {
             const bitPos = depth;
-            const mask = 1 << bitPos;
-            if (mask & depthRow) {
-              planes[axisArr[axis]][depth][v] |= 1 << u;
+            const mask = (1 << bitPos) >>> 0;
+            const check = (mask & depthRow) >>> 0;
+            if (check) {
+              planes[axis][depth][v] |= 1 << u;
             }
           }
         }

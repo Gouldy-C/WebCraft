@@ -12,6 +12,7 @@ export class Chunk {
   chunkCoords: { x: number; y: number; z: number }
   worldPosition: { x: number; y: number; z: number }
   size: number
+  voxelCount: number = 0
   terrainGenParams: TerrainGenParams
   // lod: number
 
@@ -58,15 +59,16 @@ export class Chunk {
     this.blockData[index] = value
 
     if (value === 0){
-      this.binaryData[z + (y * this.size)] = this.binaryData[z + (y * this.size)] & ~(1 << x);
-      this.binaryData[x + (y * this.size) + (this.size * this.size)] = this.binaryData[x + (y * this.size) + (this.size * this.size)] & ~(1 << z);
-      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] = this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] & ~(1 << y);
+      this.voxelCount--
+      this.binaryData[z + (y * this.size) + (this.size * this.size * 0)] &= ((~(1 << x)) >>> 0);
+      this.binaryData[x + (y * this.size) + (this.size * this.size * 1)] &= ((~(1 << z)) >>> 0);
+      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] &= ((~(1 << y)) >>> 0);
     } else {
-      this.binaryData[z + (y * this.size)] = this.binaryData[z + (y * this.size)] | (1 << x);
-      this.binaryData[x + (y * this.size) + (this.size * this.size)] = this.binaryData[x + (y * this.size) + (this.size * this.size)] | (1 << z);
-      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] = this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] | (1 << y);
+      this.voxelCount++
+      this.binaryData[z + (y * this.size) + (this.size * this.size * 0)] |= ((1 << x) >>> 0);
+      this.binaryData[x + (y * this.size) + (this.size * this.size * 1)] |= ((1 << z) >>> 0);
+      this.binaryData[x + (z * this.size) + (this.size * this.size * 2)] |= ((1 << y) >>> 0);
     }
-
     this.generateMesh()
   }
 
@@ -77,6 +79,7 @@ export class Chunk {
     this.chunkCoords = { x: 0, y: 0, z: 0 }
     this.worldPosition = { x: 0, y: 0, z: 0 }
     this.id = ""
+    this.voxelCount = 0
   }
 
   reuseChunk(terrainManager: TerrainManager, id: string) {
@@ -105,6 +108,7 @@ export class Chunk {
     if (type === "genChunkVoxelData") {
       this.blockData = new Uint16Array(data.voxelDataBuffer);
       this.binaryData = new Uint32Array(data.binaryDataBuffer)
+      this.voxelCount = data.voxelCount
       if (data.voxelCount > 0)this.generateMesh();
     }
     if (type === "genChunkMeshData") {
@@ -149,6 +153,7 @@ export class Chunk {
     }
 
     const verticesData = new Float32Array(verticesBuffer);
+    console.log(verticesData)
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
 
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)

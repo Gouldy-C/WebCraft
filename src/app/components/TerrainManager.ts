@@ -79,77 +79,20 @@ export class TerrainManager extends THREE.Object3D {
     this._init();
     const blockId = 2
     const vertices = [];
-    const points = getQuadPoints(2, 0, 0, 0, 0, 5, 5)
-    console.log(points)
-    const packed = packVertices(points, blockId, 2, 0, 5, 5)
-    vertices.push(...packed)
+    const points0 = getQuadPoints(0, 0, 0, 0, 0, 32, 32)
+    vertices.push(...packVertices(points0, blockId, 0, 0, 31, 31))
+    const points1 = getQuadPoints(0, 1, 31, 0, 0, 32, 32)
+    vertices.push(...packVertices(points1, blockId, 0, 1, 31, 31))
+    const points2 = getQuadPoints(1, 0, 0, 0, 0, 32, 32)
+    vertices.push(...packVertices(points2, blockId, 1, 0, 31, 31))
+    const points3 = getQuadPoints(1, 1, 31, 0, 0, 32, 32)
+    vertices.push(...packVertices(points3, blockId, 1, 1, 31, 31))
+    const points4 = getQuadPoints(2, 0, 0, 0, 0, 32, 32)
+    vertices.push(...packVertices(points4, blockId, 2, 0, 31, 31))
+    const points5 = getQuadPoints(2, 1, 31, 0, 0, 32, 32)
+    vertices.push(...packVertices(points5, blockId, 2, 1, 31, 31))
 
-    // Helper function to encode vertex data
-    // function encodeVertex(x: number, y: number, z: number, uv: number, normal: number) {
-    //   return ((uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x) >>> 0;
-    // }
-
-    // // Front face
-    // vertices.push(
-    //   encodeVertex(5, 0, 0, 0, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 0, 1, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 0, 2, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 0, 0, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 0, 2, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 0, 3, 4), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    // );
-
-    // // Back face
-    // vertices.push(
-    //   encodeVertex(0, 0, 5, 3, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 5, 2, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 5, 1, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 5, 3, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 5, 1, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 5, 0, 5), (5 << 17 | 5 << 12 | blockId) >>> 0, 0
-    // );
-
-    // // Left face
-    // vertices.push(
-    //   encodeVertex(0, 5, 0, 0, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 0, 3, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 5, 1, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 0, 3, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 5, 2, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 5, 1, 1), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    // );
-
-    // // Right face
-    // vertices.push(
-    //   encodeVertex(5, 5, 5, 0, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 5, 3, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 0, 2, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 5, 0, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 0, 2, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 0, 1, 0), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    // );
-
-    // // Top face
-    // vertices.push(
-    //   encodeVertex(0, 5, 0, 2, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 5, 3, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 5, 0, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 5, 0, 2, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 5, 0, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 5, 0, 1, 2), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    // );
-
-    // // Bottom face
-    // vertices.push(
-    //   encodeVertex(5, 0, 0, 1, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 5, 2, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 0, 0, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 0, 0, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(5, 0, 5, 2, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0,
-    //   encodeVertex(0, 0, 5, 3, 3), (5 << 17 | 5 << 12 | blockId) >>> 0, 0
-    // );
-
-
+    vertices.push(0, 0, 0);
 
     const verticesData = new Float32Array(vertices);
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
@@ -198,8 +141,7 @@ export class TerrainManager extends THREE.Object3D {
     const { id } = obj;
     const chunk = this.chunks.get(id);
     if (chunk) chunk.handleWorkerMessage(obj);
-    else
-      throw new Error("Chunk not found, in TerrainManager.handleWorkerMessage");
+    else throw new Error("Chunk not found, in TerrainManager.handleWorkerMessage");
   }
 
   _updateChunks(addedChunks: Set<string>, removedChunks: Set<string>) {

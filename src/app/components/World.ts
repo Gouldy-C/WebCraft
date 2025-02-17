@@ -116,7 +116,7 @@ export class World extends THREE.Group {
     this.pos = new THREE.Vector3(0, 0, 0);
 
     const axesHelper = new THREE.AxesHelper(
-      this.params.terrain.vDrawDist * this.params.terrain.chunkSize
+      this.params.terrain.chunkSize
     );
     this.add(axesHelper);
 

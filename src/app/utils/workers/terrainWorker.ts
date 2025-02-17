@@ -26,8 +26,8 @@ self.onmessage = (e: MessageEvent) => {
     genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    // genMeshData(e.data)
+    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    genMeshData(e.data)
   }
 };
 
@@ -123,7 +123,7 @@ function genVoxelData(message: WorkerPostMessage) {
   
         if (blockId !== BLOCKS.air.id) {
           voxelCount++;
-          binaryData[y + (z * size) + (size * size * 0)] |= 1 << x;
+          binaryData[z + (y * size) + (size * size * 0)] |= 1 << x;
           binaryData[x + (z * size) + (size * size * 1)] |= 1 << y;
           binaryData[x + (y * size) + (size * size * 2)] |= 1 << z;
         } else {

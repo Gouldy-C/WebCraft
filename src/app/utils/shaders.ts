@@ -72,14 +72,14 @@ float getTextureIndex(float blockId, vec3 normal) {
 
 void main() {
   float x = float(uint(position.x) & 0x3Fu);
-  float y = float(uint(position.x) >> 6 & 0x3Fu);
-  float z = float(uint(position.x) >> 12 & 0x3Fu);
-  uint normalIndex = uint(position.x) >> 18 & 0x7u;
-  uint UVIndex = uint(position.x) >> 21 & 0x3u;
+  float y = float(uint(position.x) >> 6u & 0x3Fu);
+  float z = float(uint(position.x) >> 12u & 0x3Fu);
+  uint normalIndex = uint(position.x) >> 18u & 0x7u;
+  uint UVIndex = uint(position.x) >> 21u & 0x3u;
 
   float blockId = float(uint(position.y) & 0xFFFu);
-  float width = float(uint(position.y) >> 12 & 0x1Fu);
-  float height = float(uint(position.y) >> 17 & 0x1Fu);
+  float width = float(uint(position.y) >> 12u & 0x1Fu);
+  float height = float(uint(position.y) >> 17u & 0x1Fu);
   
   vertexNormal = decodeNormal(normalIndex);
   vertexUV = decodeUVCoords(UVIndex);
