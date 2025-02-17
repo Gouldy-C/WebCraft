@@ -356,17 +356,97 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
 
   for (const [axisKey, planes] of Object.entries(crossAxisPlanes)) {
     const axis = axisKey[0]
-    const direction = axisKey.endsWith("Pos") ? "Pos" : "Neg"
+    const direction = axisKey.endsWith("Pos") ? 1 : 0
+    const axisIndex = ["x", "y", "z"].indexOf(axis)
 
-    for (let primary = 0; primary < size; primary++) {
-      const plane = planes[primary]
+
+    for (let depth = 0; depth < size; depth++) {
+      const plane = planes[depth]
       for (let v = 0; v < size; v++) {
         const binary = plane[v]
         if (binary === 0) continue;
+        let width = 0
+        let height = 0
+        let quadMask = 0
+        let voxelType = 0
+
+        for (let u = 0; u < size; u++) {
+          const bit = binary & (1 << u)
+          if (!bit && !quadMask) continue
+          let index = 0
+          if (axisIndex === 0) {
+            index = indexFromXYZCoords(depth, u, v, size)
+          }
+          if (axisIndex === 1) {
+            index = indexFromXYZCoords(u, depth, v, size)
+          }
+          if (axisIndex === 2) {
+            index = indexFromXYZCoords(u, v, depth, size)
+          }
+          const newVoxelType = voxelArray[index]
+
+          const reachedAir = !bit && quadMask
+          const voxelSame = newVoxelType === voxelType
+
+          if (reachedAir || (!voxelSame && quadMask)) {
+            for (let h = v; h < size; h++) {
+              const bitMask = plane[h] & quadMask
+              if (bitMask === quadMask) {
+                height++;
+                plane[h] = plane[h] & ((~quadMask) >>> 0);
+              }
+              else {
+                const vertices = getQuadPoints(axisIndex, direction, depth, u - width, v, width, height)
+                //add quad to the verticies based on width and height and query voxel type from voxel array
+
+                width = 0
+                height = 0
+                quadMask = 0
+                break
+              }
+            }
+          }
+          if (bit) {
+            voxelType = newVoxelType
+            quadMask |= 1 << u
+            width++
+          }
+        }
       }
     }
   }
   return packedVertices;
+}
+
+function getQuadPoints(axisIndex: number, direction: number, depth: number, u: number, v: number, width: number, height: number) {
+  const points: number[][] = []
+  const offsets = direction ? [[width, 0,], [0, 0], [0, height], [width, height]] : [[0, 0], [width, 0], [0, height], [width, height]]
+
+  for (let i = 0; i < 4; i++) {
+    let x = 0, y = 0, z = 0
+    if (axisIndex === 0) {
+      x = depth + direction
+      y = u + offsets[i][0]
+      z = v + offsets[i][1]
+    } else if (axisIndex === 1) {
+      x = u + offsets[i][0]
+      y = depth + direction
+      z = v + offsets[i][1]
+    } else if (axisIndex === 2) {
+      x = u + offsets[i][0]
+      y = v + offsets[i][1]
+      z = depth + direction
+    }
+
+    points.push([x, y, z])
+  }
+  return points
+}
+
+function packedVertices(verticies: number[][], voxelType: number, axis: number, direction: number, width: number, height: number) {
+  const packedVertices: number[] = []
+  const normal = axis * 2 + direction
+  // x = (uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x
 }
 
 export function genThroughAxisFaces(binaryVoxelArray: Uint32Array, chunkSize: number): Uint32Array {

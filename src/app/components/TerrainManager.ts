@@ -81,7 +81,7 @@ export class TerrainManager extends THREE.Object3D {
 
     // Helper function to encode vertex data
     function encodeVertex(x: number, y: number, z: number, uv: number, normal: number) {
-      return (uv << 18) | (normal << 15) | (z << 10) | (y << 5) | x;
+      return (2 << 23) | (uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x;
     }
 
     // Front face
@@ -144,7 +144,11 @@ export class TerrainManager extends THREE.Object3D {
       encodeVertex(0, 0, 5, 3, 3), blockId, 0
     );
 
+
+
     const verticesData = new Float32Array(vertices);
+    const test = (verticesData[0] << 23) >>> 23
+    console.log(test.toString(2));
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
     const bufferGeometry = new THREE.BufferGeometry();
     bufferGeometry.setAttribute('position', bufferAttribute)

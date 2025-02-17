@@ -138,11 +138,11 @@ function genVoxelData(message: WorkerPostMessage) {
     }
   }
 
-  measureTime(() => {
-    const throughAxisFaces = genThroughAxisFaces(binaryData, size)
-    const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
-    return crossAxisPlanes
-  }, `genCrossAxisFacePlanes ${message.request.id}`);
+  // measureTime(() => {
+  //   const throughAxisFaces = genThroughAxisFaces(binaryData, size)
+  //   const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
+  //   return crossAxisPlanes
+  // }, `genCrossAxisFacePlanes ${message.request.id}`);
 
   const returnData: WorkerPostMessage = {
     id: message.id,

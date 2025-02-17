@@ -23,10 +23,10 @@ vec3 decodeNormal(uint normalBits) {
 
 vec2 decodeUVCoords(uint UVBits) {
   switch(UVBits) {
-    case 0u: return vec2(0.0, 0.0);
-    case 1u: return vec2(1.0, 0.0);
-    case 2u: return vec2(1.0, 1.0);
-    case 3u: return vec2(0.0, 1.0);
+    case 0u: return vec2(0.0, 1.0);
+    case 1u: return vec2(1.0, 1.0);
+    case 2u: return vec2(1.0, 0.0);
+    case 3u: return vec2(0.0, 0.0);
     default: return vec2(0.0, 0.0);
   }
 }
