@@ -60,7 +60,7 @@ export class MainScene extends THREE.Scene {
     this.stats.update();
     
     this.previousTime = currentTime;
-    // console.log(this.renderer.info.render.triangles, this.renderer.info.render.calls);
+    console.log(Math.round(this.renderer.info.render.triangles), this.renderer.info.render.calls);
   }
 
   private addEventListeners() {

@@ -153,7 +153,6 @@ export class Chunk {
     }
 
     const verticesData = new Float32Array(verticesBuffer);
-    console.log(verticesData)
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
 
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)

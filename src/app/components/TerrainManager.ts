@@ -16,7 +16,7 @@ import { Chunk } from "./Chunk";
 import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
-import { getQuadPoints, packVertices } from "../utils/chunkGenFunctions";
+import { getQuadPoints, packVertices, posNegFacesThroughAxis } from "../utils/chunkGenFunctions";
 
 export interface TerrainGenParams {
   seed: string;
@@ -103,6 +103,11 @@ export class TerrainManager extends THREE.Object3D {
 
     const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
     this.add(testMesh)
+
+
+    const testBinary = 0b10000100001111010000000000000001
+    const {PosFaces, NegFaces} = posNegFacesThroughAxis(testBinary)
+    console.log(PosFaces.toString(2).padStart(32, '0'), NegFaces.toString(2).padStart(32, '0'))
   }
 
   update(playerPosition: THREE.Vector3) {

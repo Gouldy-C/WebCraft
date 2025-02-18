@@ -5,7 +5,7 @@ import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
 import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { binaryGreedyMesher, dirtDepth, genCrossAxisFacePlanes, genThroughAxisFaces, getTerrainXYZ, terrainHeight } from '../chunkGenFunctions';
+import { binaryGreedyMesher, culledMesher, dirtDepth, genCrossAxisFacePlanes, genThroughAxisFaces, getTerrainXYZ, terrainHeight } from '../chunkGenFunctions';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -26,8 +26,8 @@ self.onmessage = (e: MessageEvent) => {
     genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    genMeshData(e.data)
+    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    // genMeshData(e.data)
   }
 };
 
@@ -76,7 +76,7 @@ function genVoxelData(message: WorkerPostMessage) {
         const heightValueD = terrainHeight({ x: nextSampleX, z: nextSampleZ }, heightMap, params, fractalNoise, wCoords);
   
         const heightValueX = THREE.MathUtils.lerp(heightValueA, heightValueB, smoothTX);
-        const heightValueZ = THREE.MathUtils.lerp(heightValueC, heightValueD, smoothTZ);
+        const heightValueZ = THREE.MathUtils.lerp(heightValueC, heightValueD, smoothTX);
         const heightValue = THREE.MathUtils.lerp(heightValueX, heightValueZ, smoothTZ);
         heightMap[x + z * size] = heightValue;
     
@@ -86,7 +86,7 @@ function genVoxelData(message: WorkerPostMessage) {
         const dirtValueD = dirtDepth({ x: nextSampleX, z: nextSampleZ }, maxDirtDepth, dirtNoiseMap, params, dirtNoise, wCoords);
   
         const dirtValueX = THREE.MathUtils.lerp(dirtValueA, dirtValueB, smoothTX);
-        const dirtValueZ = THREE.MathUtils.lerp(dirtValueC, dirtValueD, smoothTZ);
+        const dirtValueZ = THREE.MathUtils.lerp(dirtValueC, dirtValueD, smoothTX);
         const dirtValue = THREE.MathUtils.lerp(dirtValueX, dirtValueZ, smoothTZ);
         dirtNoiseMap[x + z * size] = dirtValue;
       }
@@ -166,7 +166,7 @@ function genMeshData(message: WorkerPostMessage) {
   const voxelData = new Uint16Array(voxelDataBuffer)
   const binaryData = new Uint32Array(binaryDataBuffer)
 
-  let vertices = binaryGreedyMesher(voxelData, binaryData, size)
+  let vertices = culledMesher(voxelData, binaryData, size)
 
   const verticesBuffer = new Float32Array(vertices).buffer
 
