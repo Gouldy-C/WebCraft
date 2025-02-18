@@ -17,6 +17,7 @@ import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
 import { getQuadPoints, packVertices, posNegFacesThroughAxis } from "../utils/chunkGenFunctions";
+import { materialAOMap } from "three/webgpu";
 
 export interface TerrainGenParams {
   seed: string;
@@ -42,6 +43,7 @@ export interface TerrainGenParams {
 
 export class TerrainManager extends THREE.Object3D {
   world: World;
+  terrainMesh: THREE.BatchedMesh
 
   chunks: Map<string, Chunk> = new Map();
   activeChunks: Set<string> = new Set();
@@ -68,6 +70,9 @@ export class TerrainManager extends THREE.Object3D {
     this.currentChunk = { x: Infinity, y: Infinity, z: Infinity };
     this.shaderMaterial = new THREE.ShaderMaterial();
     this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16);
+    this.terrainMesh = new THREE.BatchedMesh(3000, 99999999);
+    this.terrainMesh.material = this.shaderMaterial
+    this.add(this.terrainMesh);
 
     const workerParams = {
       url: new URL("../utils/workers/terrainWorker.ts", import.meta.url),
@@ -107,7 +112,7 @@ export class TerrainManager extends THREE.Object3D {
 
     const testBinary = 0b10000100001111010000000000000001
     const {PosFaces, NegFaces} = posNegFacesThroughAxis(testBinary)
-    console.log(PosFaces.toString(2).padStart(32, '0'), NegFaces.toString(2).padStart(32, '0'))
+    // console.log(PosFaces.toString(2).padStart(32, '0'), NegFaces.toString(2).padStart(32, '0'))
   }
 
   update(playerPosition: THREE.Vector3) {

@@ -22,7 +22,7 @@ export const defaultWorldStore: WorldStore = {
     chunkSize: 32,
     maxWorldHeight: 256,
     hDrawDist: 10,
-    vDrawDist: 4,
+    vDrawDist: 2,
     seed: "default",
     fractalNoise: {
       amplitude: 0.7,

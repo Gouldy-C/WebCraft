@@ -26,8 +26,8 @@ self.onmessage = (e: MessageEvent) => {
     genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    // genMeshData(e.data)
+    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    genMeshData(e.data)
   }
 };
 

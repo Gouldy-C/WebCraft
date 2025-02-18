@@ -26,7 +26,10 @@ export class Chunk {
   // Data
   binaryData: Uint32Array
   blockData: Uint16Array
-  mesh: THREE.Mesh | null = null
+
+  bufferGeometry: THREE.BufferGeometry | null = null
+  geometryId: number | null = null
+  instanceId: number | null = null
 
 
   constructor(terrainManager: TerrainManager, id: string) {
@@ -73,7 +76,7 @@ export class Chunk {
   }
 
   clear() {
-    this._disposeMesh()
+    this._disposeGeometry()
     this.binaryData = new Uint32Array(this.size * this.size * 3)
     this.blockData = new Uint16Array(this.size * this.size * this.size)
     this.chunkCoords = { x: 0, y: 0, z: 0 }
@@ -112,7 +115,7 @@ export class Chunk {
       if (data.voxelCount > 0)this.generateMesh();
     }
     if (type === "genChunkMeshData") {
-      this._processMeshData(data.verticesBuffer);
+      this._processGeometryData(data.verticesBuffer);
     }
   }
 
@@ -146,33 +149,57 @@ export class Chunk {
     this.terrainManager.workerQueue.addPriorityRequest(requestData);
   }
 
-  private _processMeshData(verticesBuffer: ArrayBuffer) {
-    if (!this.mesh) {
-      this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.shaderMaterial)
-      this.terrainManager.add(this.mesh)
-    }
-
-    const verticesData = new Float32Array(verticesBuffer);
-    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
-
-    this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
-    this.mesh.geometry.setAttribute('position', bufferAttribute)
-    this.mesh.geometry.computeBoundingSphere()
-    this.mesh.geometry.computeBoundingBox()
-  }
-
-
-  private _disposeMesh() {
-    if (!this.mesh) return
-    this.terrainManager.remove(this.mesh);
-    this.mesh.geometry.dispose();
-    if (Array.isArray(this.mesh.material)) {
-      this.mesh.material.forEach((material) => {
-        material.dispose();
-      });
+  private _processGeometryData(verticesBuffer: ArrayBuffer) {
+    // First time setup
+    if (!this.bufferGeometry || !this.geometryId || !this.instanceId) {
+        this._disposeGeometry();
+        this.bufferGeometry = new THREE.BufferGeometry();
+        const verticesData = new Float32Array(verticesBuffer);
+        const bufferAttribute = new THREE.BufferAttribute(verticesData, 3);
+        this.bufferGeometry.setAttribute('position', bufferAttribute);
+        
+        // Add to BatchedMesh and store IDs
+        this.geometryId = this.terrainManager.terrainMesh.addGeometry(this.bufferGeometry);
+        this.instanceId = this.terrainManager.terrainMesh.addInstance(this.geometryId);
+        
+        // Set initial matrix
+        const matrix = new THREE.Matrix4();
+        matrix.setPosition(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z);
+        this.terrainManager.terrainMesh.setMatrixAt(this.instanceId, matrix);
     } else {
-      this.mesh.material.dispose();
+        // Just update existing geometry
+        const verticesData = new Float32Array(verticesBuffer);
+        const bufferAttribute = new THREE.BufferAttribute(verticesData, 3);
+        this.bufferGeometry.setAttribute('position', bufferAttribute);
+        
+        // Update matrix if position changed
+        const matrix = new THREE.Matrix4();
+        this.terrainManager.terrainMesh.getMatrixAt(this.instanceId, matrix);
+        const position = new THREE.Vector3();
+        matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
+        
+        if (!position.equals(this.worldPosition)) {
+            matrix.setPosition(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z);
+            this.terrainManager.terrainMesh.setMatrixAt(this.instanceId, matrix);
+        }
     }
-    this.mesh = null
+
+    // Mark BatchedMesh as needing updates
+    this.terrainManager.terrainMesh.computeBoundingSphere();
+    this.terrainManager.terrainMesh.computeBoundingBox();
+}
+
+
+  private _disposeGeometry() {
+    if (this.bufferGeometry) {
+      this.bufferGeometry.dispose();
+    }
+    this.bufferGeometry = null
+    if (this.geometryId) {
+      this.terrainManager.terrainMesh.deleteGeometry(this.geometryId)
+    }
+    this.geometryId = null
+    this.instanceId = null
+    this.terrainManager.terrainMesh.optimize()
   }
 }
