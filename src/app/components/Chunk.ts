@@ -27,6 +27,9 @@ export class Chunk {
   binaryData: Uint32Array
   blockData: Uint16Array
   mesh: THREE.Mesh | null = null
+  bufferGeometry: THREE.BufferGeometry | null = null
+
+
 
 
   constructor(terrainManager: TerrainManager, id: string) {
@@ -147,13 +150,19 @@ export class Chunk {
   }
 
   private _processMeshData(verticesBuffer: ArrayBuffer) {
-    if (!this.mesh) {
-      this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.terrainManager.shaderMaterial)
-      this.terrainManager.add(this.mesh)
-    }
-
     const verticesData = new Float32Array(verticesBuffer);
     const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
+    if (!this.bufferGeometry) {
+      this.bufferGeometry = new THREE.BufferGeometry();
+    }
+    this.bufferGeometry.setAttribute('position', bufferAttribute)
+    this.bufferGeometry.computeBoundingSphere();
+    this.bufferGeometry.computeBoundingBox();
+
+    if (!this.mesh) {
+      this.mesh = new THREE.Mesh(this.bufferGeometry, this.terrainManager.shaderMaterial)
+      this.terrainManager.add(this.mesh)
+    }
 
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
     this.mesh.geometry.setAttribute('position', bufferAttribute)
@@ -166,6 +175,7 @@ export class Chunk {
     if (!this.mesh) return
     this.terrainManager.remove(this.mesh);
     this.mesh.geometry.dispose();
+    this.bufferGeometry?.dispose();
     if (Array.isArray(this.mesh.material)) {
       this.mesh.material.forEach((material) => {
         material.dispose();

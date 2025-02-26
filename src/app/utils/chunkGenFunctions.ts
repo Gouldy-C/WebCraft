@@ -1,5 +1,5 @@
 import { TerrainGenParams } from "../components/TerrainManager";
-import { BLOCKS, Resource} from "./BlocksData";
+import { blockIDToBlock, BLOCKS, Resource} from "./BlocksData";
 import * as SimplexNoise from "simplex-noise";
 import { indexFromXYZCoords} from "./generalUtils";
 import { FractalNoise } from "./classes/FractalNoise";
@@ -31,21 +31,21 @@ export function terrainHeight(
   return value;
 }
 
-export function dirtDepth(
+export function terrainNoiseValue(
   pos: { x: number; z: number },
-  maxDirtDepth: number,
-  dirtDepthMap: Uint8Array,
+  maxHeight: number,
+  noiseMap: Uint8Array,
   params: TerrainGenParams,
   noiseFunc: SimplexNoise.NoiseFunction2D,
   wCoords: { x: number; y: number; z: number }
 ) {
-  const value = dirtDepthMap[pos.x + pos.z * params.chunkSize];
+  const value = noiseMap[pos.x + pos.z * params.chunkSize];
   if (value === 0) {
-    const noiseValue = noiseFunc((pos.x + wCoords.x) / 40, (pos.z + wCoords.z) / 40);
+    const noiseValue = noiseFunc((pos.x + wCoords.x) / 80, (pos.z + wCoords.z) / 80);
     const heightValue = (noiseValue + 1) / 2;
-    const dirtDepth = Math.floor(heightValue * maxDirtDepth);
-    dirtDepthMap[pos.x + pos.z * params.chunkSize] = dirtDepth;
-    return dirtDepth;
+    const res = Math.floor(heightValue * maxHeight);
+    noiseMap[pos.x + pos.z * params.chunkSize] = res;
+    return res;
   }
   return value;
 }
@@ -54,16 +54,27 @@ export function getTerrainXYZ(
   pos: { x: number; y: number; z: number },
   terrainHeight: number,
   dirtDepth: number,
-  params: TerrainGenParams
+  mountainStartHeight: number,
+  snowHeight: number,
+  sandDepth: number
 ) {
+  if (pos.y > terrainHeight && pos.y <= 80) return BLOCKS.water.id;
   if (pos.y > terrainHeight) return BLOCKS.air.id;
+  if (terrainHeight <= 80 && pos.y && pos.y >= terrainHeight - sandDepth) return BLOCKS.sand.id
+  if (terrainHeight > snowHeight && pos.y === terrainHeight) return BLOCKS.snow.id;
+  if (terrainHeight > mountainStartHeight) return BLOCKS.stone.id;
+  if (pos.y > mountainStartHeight - dirtDepth) return BLOCKS.dirt.id;
 
-  // const resource = getResourceXYZ({x: pos.x, y: pos.y, z: pos.z}, resources);
-  // if (resource && pos.y <= terrainHeight) return resource;
 
-  if (pos.y === terrainHeight && pos.y < 200) return BLOCKS.grass.id;
-  if (pos.y < terrainHeight && pos.y > terrainHeight - dirtDepth) return BLOCKS.dirt.id;
-  if (pos.y < terrainHeight) return BLOCKS.stone.id;
+
+  
+  if (pos.y === terrainHeight) return BLOCKS.grass.id;
+  if (pos.y >= terrainHeight - dirtDepth) return BLOCKS.dirt.id;
+
+  // if above mountian start height we want stone and brim of dirt
+  // if below mountian start height we want dirt and grass
+
+  if (pos.y <= terrainHeight) return BLOCKS.stone.id;
 
   return BLOCKS.air.id;
 }
@@ -367,7 +378,9 @@ export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, s
       for (let x = 0; x < size; x++) {
         const index = x + y * size + z * size * size
         const voxel = voxelArray[index]
+        
         if (voxel === 0) continue;
+        const blockData = blockIDToBlock[voxel]
         
         const adjacentCoords = getCoordsForAdjacentVoxel(x, y, z, size)
         for (let i = 0; i < adjacentCoords.length; i++) {
@@ -391,8 +404,8 @@ export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, s
           }
 
           const [ax, ay, az] = adjacentCoords[i]
-          const flag = az >= size || az < 0 || ay >= size || ay < 0 || ax >= size || ax < 0
-          if (flag) {
+          const chunkBoundsFlag = az >= size || az < 0 || ay >= size || ay < 0 || ax >= size || ax < 0
+          if (chunkBoundsFlag) {
             const vertices = getQuadPoints(axis, direction, depth, u, v, 1, 1)
             const packedQuad = packVertices(vertices, voxel, axis, direction, 0, 0)
             packedVertices.push(...packedQuad)
@@ -401,7 +414,8 @@ export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, s
 
           const aIndex = ax + ay * size + az * size * size
           const aVoxel = voxelArray[aIndex]
-          if (aVoxel === 0) {
+          const aBlockData = blockIDToBlock[aVoxel]
+          if (aVoxel === 0 || (aBlockData.transparent && !blockData.transparent)) {
             const vertices = getQuadPoints(axis, direction, depth, u, v, 1, 1)
             const packedQuad = packVertices(vertices, voxel, axis, direction, 0, 0)
             packedVertices.push(...packedQuad)
