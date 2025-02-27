@@ -58,12 +58,13 @@ function genVoxelData(message: WorkerPostMessage) {
 
 
 
-  const mountainOffset = 150
+  const mountainOffset = 155
   const mountianChange = 20
   const snowOffset = 170
   const snowChange = 15
   const sandChange = 5
-  const dirtChange = 20
+  const dirtChange = 15
+  const waterLevel = 80
   const sampleRate = 4
 
   // 1-6 ms pretty fast, rarely up to 20ms
@@ -142,10 +143,10 @@ function genVoxelData(message: WorkerPostMessage) {
 
   for (let z = 0; z < size; z++) {
     const zOffset = z * size;
-    const wzCol = wCoords.z + z;
+    const wz = wCoords.z + z;
     
     for (let x = 0; x < size; x++) {
-      const wxCol = wCoords.x + x;
+      const wx = wCoords.x + x;
       const mapIndex = x + zOffset;
       const terrainHeight = heightMap[mapIndex];
       const dirtDepth = dirtNoiseMap[mapIndex];
@@ -157,20 +158,20 @@ function genVoxelData(message: WorkerPostMessage) {
       
       for (let y = 0; y < size; y++) {
         const wy = wCoords.y + y;
-
-        // todo: add suport for block chnages by players via the diffs storage map
-
         const blockId = getTerrainXYZ(
-          {x: wxCol, y: wy, z: wzCol},
+          {x: wx, y: wy, z: wz},
           terrainHeight,
           dirtDepth,
           mountainHeight + mountainOffset,
           snowValue + snowOffset,
-          sandDepth
+          sandDepth,
+          waterLevel,
         );
-
+        
         // todo: add resorces generation
-  
+        
+        // todo: add support for block chnages by players via the diffs map
+
         const index = x + y * size + z * size * size;
         voxelData[index] = blockId;
   

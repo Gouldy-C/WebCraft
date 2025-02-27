@@ -21,8 +21,8 @@ export const defaultWorldStore: WorldStore = {
   terrain: {
     chunkSize: 32,
     maxWorldHeight: 256,
-    hDrawDist: 5,
-    vDrawDist: 0,
+    hDrawDist: 20, 
+    vDrawDist: 1,
     seed: "def",
     fractalNoise: {
       amplitude: 0.9,

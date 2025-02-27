@@ -156,7 +156,6 @@ export class Chunk {
       this.bufferGeometry = new THREE.BufferGeometry();
     }
     this.bufferGeometry.setAttribute('position', bufferAttribute)
-    this.bufferGeometry.computeBoundingSphere();
     this.bufferGeometry.computeBoundingBox();
 
     if (!this.mesh) {

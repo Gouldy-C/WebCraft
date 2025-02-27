@@ -44,7 +44,6 @@ export function terrainNoiseValue(
     const noiseValue = noiseFunc((pos.x + wCoords.x) / 80, (pos.z + wCoords.z) / 80);
     const heightValue = (noiseValue + 1) / 2;
     const res = Math.floor(heightValue * maxHeight);
-    noiseMap[pos.x + pos.z * params.chunkSize] = res;
     return res;
   }
   return value;
@@ -56,25 +55,19 @@ export function getTerrainXYZ(
   dirtDepth: number,
   mountainStartHeight: number,
   snowHeight: number,
-  sandDepth: number
+  sandDepth: number,
+  waterLevel: number,
 ) {
-  if (pos.y > terrainHeight && pos.y <= 80) return BLOCKS.water.id;
-  if (pos.y > terrainHeight) return BLOCKS.air.id;
-  if (terrainHeight <= 80 && pos.y && pos.y >= terrainHeight - sandDepth) return BLOCKS.sand.id
-  if (terrainHeight > snowHeight && pos.y === terrainHeight) return BLOCKS.snow.id;
-  if (terrainHeight > mountainStartHeight) return BLOCKS.stone.id;
-  if (pos.y > mountainStartHeight - dirtDepth) return BLOCKS.dirt.id;
-
-
-
+  if (pos.y > terrainHeight && pos.y <= waterLevel) return BLOCKS.water.id;
+  if (terrainHeight <= waterLevel && pos.y >= terrainHeight - sandDepth && pos.y <= terrainHeight) return BLOCKS.sand.id
+  if (terrainHeight > mountainStartHeight && pos.y <= terrainHeight) return BLOCKS.stone.id;
+  if (terrainHeight > snowHeight && pos.y === terrainHeight + 1) return BLOCKS.snow.id;
+  if (pos.y >= mountainStartHeight - dirtDepth && pos.y <= terrainHeight) return BLOCKS.dirt.id;
+  if (pos.y >= terrainHeight - dirtDepth && pos.y < terrainHeight) return BLOCKS.dirt.id;
   
   if (pos.y === terrainHeight) return BLOCKS.grass.id;
-  if (pos.y >= terrainHeight - dirtDepth) return BLOCKS.dirt.id;
-
-  // if above mountian start height we want stone and brim of dirt
-  // if below mountian start height we want dirt and grass
-
-  if (pos.y <= terrainHeight) return BLOCKS.stone.id;
+  if (pos.y > terrainHeight) return BLOCKS.air.id;
+  if (pos.y < terrainHeight) return BLOCKS.stone.id;
 
   return BLOCKS.air.id;
 }
@@ -453,7 +446,7 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
         let quadMask = 0
         let voxelType = 1
 
-        for (let u = 0; u <= size; u++) {  // Note: changed to <= to handle edge
+        for (let u = 0; u <= size; u++) {  
           const isEdge = u === size
           const bit = isEdge ? 0 : (binary & (1 << u))
           
