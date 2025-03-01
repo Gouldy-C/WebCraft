@@ -1,53 +1,10 @@
 import { InputManager } from "../utils/classes/InputManger";
 import * as THREE from "three";
 import { DataStore } from "../utils/classes/DataStore";
-import { TimeObject } from "./unused/Time";
-import { TerrainGenParams, TerrainManager } from "./TerrainManager";
+import {  TerrainManager } from "./TerrainManager";
 import { MainScene } from "../pages/MainScene";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-
-export interface WorldStore {
-  objects: { [key: string]: any };
-  players: { [key: string]: any };
-  time: TimeObject;
-  terrain: TerrainGenParams;
-  diffs: Record<string, { blockId: number }>;
-}
-
-export const defaultWorldStore: WorldStore = {
-  time: { time: 0, days: 0, years: 0, minutesInDay: 20, daysInYear: 365 },
-  objects: {},
-  players: {},
-  terrain: {
-    chunkSize: 32,
-    maxWorldHeight: 256,
-    hDrawDist: 20, 
-    vDrawDist: 1,
-    seed: "def",
-    fractalNoise: {
-      amplitude: 0.9,
-      frequency: 0.002,
-      octaves: 4,
-      lacunarity: 2.0,
-      persistence: 0.5,
-      offset: 0.1,
-    },
-    trees: {
-      trunk: {
-        diameter: 1,
-        minHeight: 5,
-        maxHeight: 10,
-      },
-      canopy: {
-        minRadius: 3,
-        maxRadius: 5,
-      },
-      buffer: 3,
-      density: 0.008,
-    },
-  },
-  diffs: {},
-};
+import { defaultWorldStore, WorldStore } from "../utils/states/WorldState";
 
 export class World extends THREE.Group {
   scene: MainScene;
@@ -116,7 +73,7 @@ export class World extends THREE.Group {
     this.pos = new THREE.Vector3(0, 0, 0);
 
     const axesHelper = new THREE.AxesHelper(
-      this.params.terrain.chunkSize
+      480
     );
     this.add(axesHelper);
 

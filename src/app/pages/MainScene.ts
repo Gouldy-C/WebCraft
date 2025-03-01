@@ -35,8 +35,8 @@ export class MainScene extends THREE.Scene {
     this.world = new World(this);
     this.add(this.world);
 
-    const { chunkSize, hDrawDist } = this.world.params.terrain;
     if (this.fogBoolean) {
+      const { chunkSize, hDrawDist } = this.world.params.terrain;
       this.fog = new THREE.Fog(
         "#c4e2ff",
         chunkSize * (hDrawDist / 2),

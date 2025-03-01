@@ -5,7 +5,7 @@ import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
 import * as THREE from 'three';
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { culledMesher, getTerrainXYZ, terrainHeight, terrainNoiseValue } from '../chunkGenFunctions';
+import { binaryGreedyMesher, culledMesher, getTerrainXYZ, terrainHeight, terrainNoiseValue } from '../chunkGenFunctions';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -22,8 +22,8 @@ export interface RequestGeometryData {
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "genChunkVoxelData") {
-    measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
-    // genVoxelData(e.data)
+    // measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
+    genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
     // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
@@ -43,11 +43,11 @@ function genVoxelData(message: WorkerPostMessage) {
   const binaryData = new Uint32Array(size * size * 3)
   const voxelData = new Uint16Array(size * size * size)
 
-  const heightMap = new Uint8Array(size * size)
-  const dirtNoiseMap = new Uint8Array(size * size)
-  const mountainNoiseMap = new Uint8Array(size * size)
-  const snowNoiseMap = new Uint8Array(size * size)
-  const sandNoiseMap = new Uint8Array(size * size)
+  const heightMap = new Uint16Array(size * size)
+  const dirtNoiseMap = new Uint16Array(size * size)
+  const mountainNoiseMap = new Uint16Array(size * size)
+  const snowNoiseMap = new Uint16Array(size * size)
+  const sandNoiseMap = new Uint16Array(size * size)
 
 
   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
@@ -56,16 +56,18 @@ function genVoxelData(message: WorkerPostMessage) {
   const snowNoise = SimplexNoise.createNoise2D(RNG(params.seed + "snowLayer"));
   const sandNoise = SimplexNoise.createNoise2D(RNG(params.seed + "sandLayer"));
 
+  const mountainOffset = params.mountainHeight
+  const mountianChange = params.mountainVariance
 
+  const snowOffset = params.snowHeight
+  const snowChange = params.snowVariance
 
-  const mountainOffset = 155
-  const mountianChange = 20
-  const snowOffset = 170
-  const snowChange = 15
-  const sandChange = 5
-  const dirtChange = 15
-  const waterLevel = 80
-  const sampleRate = 4
+  const sandChange = params.sandVariance
+  const dirtChange = params.dirtVariance
+
+  const waterLevel = params.seaLevel
+  const sampleRate = params.terrainSampleRate
+
 
   // 1-6 ms pretty fast, rarely up to 20ms
   if (wCoords.y >= -size) {
@@ -169,6 +171,8 @@ function genVoxelData(message: WorkerPostMessage) {
         );
         
         // todo: add resorces generation
+
+        // todo: add tree spawns
         
         // todo: add support for block chnages by players via the diffs map
 
@@ -220,7 +224,8 @@ function genMeshData(message: WorkerPostMessage) {
   const voxelData = new Uint16Array(voxelDataBuffer)
   const binaryData = new Uint32Array(binaryDataBuffer)
 
-  let vertices = culledMesher(voxelData, binaryData, size)
+  let vertices = binaryGreedyMesher(voxelData, binaryData, size)
+  // let vertices = culledMesher(voxelData, binaryData, size)
 
   const verticesBuffer = new Float32Array(vertices).buffer
 

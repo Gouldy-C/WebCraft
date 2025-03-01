@@ -155,6 +155,7 @@ export class Chunk {
     if (!this.bufferGeometry) {
       this.bufferGeometry = new THREE.BufferGeometry();
     }
+    if (verticesData.length <= 111) return
     this.bufferGeometry.setAttribute('position', bufferAttribute)
     this.bufferGeometry.computeBoundingBox();
 
@@ -162,6 +163,7 @@ export class Chunk {
       this.mesh = new THREE.Mesh(this.bufferGeometry, this.terrainManager.shaderMaterial)
       this.terrainManager.add(this.mesh)
     }
+
 
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
     this.mesh.geometry.setAttribute('position', bufferAttribute)

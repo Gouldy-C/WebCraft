@@ -8,7 +8,6 @@ export interface FractalNoiseParams {
   octaves: number;
   lacunarity: number;
   persistence: number;
-  offset: number;
 };
 
 export class FractalNoise {
@@ -24,8 +23,8 @@ export class FractalNoise {
 
   constructor(params: FractalNoiseParams, seed: string | number) {
     this.fast = true;
-    this.amplitude = params.amplitude ?? 0.5;
-    this.frequency = params.frequency ?? 0.0015;
+    this.amplitude = params.amplitude ?? 0.999;
+    this.frequency = params.frequency ?? 0.001;
     this.octaves = params.octaves ?? 4;
     this.lacunarity = params.lacunarity ?? 2.0;
     this.persistence = params.persistence ?? 0.5;

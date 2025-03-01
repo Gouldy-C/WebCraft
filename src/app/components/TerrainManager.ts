@@ -14,11 +14,6 @@ import { Chunk } from "./Chunk";
 import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
-import {
-  getQuadPoints,
-  packVertices,
-  posNegFacesThroughAxis,
-} from "../utils/chunkGenFunctions";
 
 export interface TerrainGenParams {
   seed: string;
@@ -26,7 +21,18 @@ export interface TerrainGenParams {
   maxWorldHeight: number;
   hDrawDist: number;
   vDrawDist: number;
+  terrainSampleRate: number;
+
   fractalNoise: FractalNoiseParams;
+
+  seaLevel: number;
+  mountainHeight: number;
+  mountainVariance: number;
+  snowHeight: number;
+  snowVariance: number;
+  dirtVariance: number;
+  sandVariance: number;
+
   trees: {
     buffer: number;
     density: number;
@@ -58,8 +64,6 @@ export class TerrainManager extends THREE.Object3D {
   shaderMaterial: THREE.ShaderMaterial;
   textureArrayBuilder: TextureArrayBuilder;
 
-  batchedMesh: THREE.BatchedMesh | null = null;
-
   workerQueue: WorkerQueue<WorkerObj>;
 
   constructor(world: World) {
@@ -71,12 +75,6 @@ export class TerrainManager extends THREE.Object3D {
     this.vDrawDist = this.params.vDrawDist;
     this.currentChunk = { x: Infinity, y: Infinity, z: Infinity };
     this.shaderMaterial = new THREE.ShaderMaterial();
-    const maxInstances = (this.batchedMesh = new THREE.BatchedMesh(
-      10000,
-      25000000,
-      10,
-      this.shaderMaterial
-    ));
     this.textureArrayBuilder = new TextureArrayBuilder("terrain", 16, 16);
 
     const workerParams = {
@@ -87,36 +85,6 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
 
     this._init();
-    const blockId = 2;
-    const vertices = [];
-    const points0 = getQuadPoints(0, 0, 0, 0, 0, 32, 32);
-    vertices.push(...packVertices(points0, blockId, 0, 0, 31, 31));
-    const points1 = getQuadPoints(0, 1, 31, 0, 0, 32, 32);
-    vertices.push(...packVertices(points1, blockId, 0, 1, 31, 31));
-    const points2 = getQuadPoints(1, 0, 0, 0, 0, 32, 32);
-    vertices.push(...packVertices(points2, blockId, 1, 0, 31, 31));
-    const points3 = getQuadPoints(1, 1, 31, 0, 0, 32, 32);
-    vertices.push(...packVertices(points3, blockId, 1, 1, 31, 31));
-    const points4 = getQuadPoints(2, 0, 0, 0, 0, 32, 32);
-    vertices.push(...packVertices(points4, blockId, 2, 0, 31, 31));
-    const points5 = getQuadPoints(2, 1, 31, 0, 0, 32, 32);
-    vertices.push(...packVertices(points5, blockId, 2, 1, 31, 31));
-
-    vertices.push(0, 0, 0);
-
-    const verticesData = new Float32Array(vertices);
-    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3);
-    const bufferGeometry = new THREE.BufferGeometry();
-    bufferGeometry.setAttribute("position", bufferAttribute);
-    bufferGeometry.computeBoundingBox();
-
-
-    // const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
-    // this.add(testMesh)
-
-    // const testBinary = 0b10000100001111010000000000000001
-    // const {PosFaces, NegFaces} = posNegFacesThroughAxis(testBinary)
-    // console.log(PosFaces.toString(2).padStart(32, '0'), NegFaces.toString(2).padStart(32, '0'))
   }
 
   update(playerPosition: THREE.Vector3) {

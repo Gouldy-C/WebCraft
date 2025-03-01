@@ -1,7 +1,6 @@
 import { TerrainGenParams } from "../components/TerrainManager";
 import { blockIDToBlock, BLOCKS, Resource} from "./BlocksData";
 import * as SimplexNoise from "simplex-noise";
-import { indexFromXYZCoords} from "./generalUtils";
 import { FractalNoise } from "./classes/FractalNoise";
 
 export interface ResourceGenerator {
@@ -15,7 +14,7 @@ export interface ResourceGenerator {
 
 export function terrainHeight(
   pos: { x: number; z: number },
-  heightMap: Uint8Array,
+  heightMap: Uint16Array,
   params: TerrainGenParams,
   fractalNoise: FractalNoise, 
   wCoords: { x: number; y: number; z: number }
@@ -24,7 +23,7 @@ export function terrainHeight(
   if (value === 0) {
     const noiseValue = fractalNoise.fractal2D(pos.x + wCoords.x, pos.z + wCoords.z);
     const heightValue = (noiseValue + 1) / 2;
-    const blockHeight = Math.floor(heightValue * params.maxWorldHeight - 1);
+    const blockHeight = Math.floor(heightValue * params.maxWorldHeight);
     heightMap[pos.x + pos.z * params.chunkSize] = blockHeight;
     return blockHeight;
   }
@@ -34,7 +33,7 @@ export function terrainHeight(
 export function terrainNoiseValue(
   pos: { x: number; z: number },
   maxHeight: number,
-  noiseMap: Uint8Array,
+  noiseMap: Uint16Array,
   params: TerrainGenParams,
   noiseFunc: SimplexNoise.NoiseFunction2D,
   wCoords: { x: number; y: number; z: number }
@@ -53,16 +52,16 @@ export function getTerrainXYZ(
   pos: { x: number; y: number; z: number },
   terrainHeight: number,
   dirtDepth: number,
-  mountainStartHeight: number,
+  mountainHeight: number,
   snowHeight: number,
   sandDepth: number,
   waterLevel: number,
 ) {
   if (pos.y > terrainHeight && pos.y <= waterLevel) return BLOCKS.water.id;
   if (terrainHeight <= waterLevel && pos.y >= terrainHeight - sandDepth && pos.y <= terrainHeight) return BLOCKS.sand.id
-  if (terrainHeight > mountainStartHeight && pos.y <= terrainHeight) return BLOCKS.stone.id;
+  if (terrainHeight > mountainHeight && pos.y <= terrainHeight) return BLOCKS.stone.id;
   if (terrainHeight > snowHeight && pos.y === terrainHeight + 1) return BLOCKS.snow.id;
-  if (pos.y >= mountainStartHeight - dirtDepth && pos.y <= terrainHeight) return BLOCKS.dirt.id;
+  if (pos.y >= mountainHeight - dirtDepth && pos.y <= terrainHeight) return BLOCKS.dirt.id;
   if (pos.y >= terrainHeight - dirtDepth && pos.y < terrainHeight) return BLOCKS.dirt.id;
   
   if (pos.y === terrainHeight) return BLOCKS.grass.id;
@@ -376,31 +375,29 @@ export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, s
         const blockData = blockIDToBlock[voxel]
         
         const adjacentCoords = getCoordsForAdjacentVoxel(x, y, z, size)
-        for (let i = 0; i < adjacentCoords.length; i++) {
-          const axis = Math.floor(i / 2)
-          const direction = i % 2 === 0 ? 1 : 0
+        for (let axis = 0; axis < adjacentCoords.length; axis++) {
           let depth = 0, u = 0, v = 0
-          if (axis === 0) {
+          if (axis === 0 || axis === 1) {
             depth = x
             u = z
             v = y
           }
-          if (axis === 1) {
+          if (axis === 2 || axis === 3) {
             depth = y
             u = x
             v = z
           }
-          if (axis === 2) {
+          if (axis === 4 || axis === 5) {
             depth = z
             u = x
             v = y
           }
 
-          const [ax, ay, az] = adjacentCoords[i]
+          const [ax, ay, az] = adjacentCoords[axis]
           const chunkBoundsFlag = az >= size || az < 0 || ay >= size || ay < 0 || ax >= size || ax < 0
           if (chunkBoundsFlag) {
-            const vertices = getQuadPoints(axis, direction, depth, u, v, 1, 1)
-            const packedQuad = packVertices(vertices, voxel, axis, direction, 0, 0)
+            const vertices = getQuadPoints(axis, depth, u, v, 1, 1)
+            const packedQuad = packVertices(vertices, voxel, axis, 1, 1)
             packedVertices.push(...packedQuad)
             continue
           }
@@ -409,8 +406,8 @@ export function culledMesher(voxelArray: Uint16Array, binaryData: Uint32Array, s
           const aVoxel = voxelArray[aIndex]
           const aBlockData = blockIDToBlock[aVoxel]
           if (aVoxel === 0 || (aBlockData.transparent && !blockData.transparent)) {
-            const vertices = getQuadPoints(axis, direction, depth, u, v, 1, 1)
-            const packedQuad = packVertices(vertices, voxel, axis, direction, 0, 0)
+            const vertices = getQuadPoints(axis, depth, u, v, 1, 1)
+            const packedQuad = packVertices(vertices, voxel, axis, 1, 1)
             packedVertices.push(...packedQuad)
           }
         }
@@ -429,77 +426,104 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
   const throughAxisFaces = genThroughAxisFaces(binaryData, size)
   const crossAxisPlanes = genCrossAxisFacePlanes(throughAxisFaces, size)
 
-  for (const [index, planes] of crossAxisPlanes.entries()) {
-    const axis = Math.floor(index / 2)
-    const direction = index % 2 === 0 ? 1 : 0
-
+  for (const [axis, planes] of crossAxisPlanes.entries()) {
     for (let depth = 0; depth < size; depth++) {
       const plane = planes[depth]
       if (!plane) continue;
 
       for (let v = 0; v < size; v++) {
         const binary = plane[v]
-        if (binary === 0) continue;
+        if (!binary) continue;
 
         let width = 0
         let height = 0
-        let quadMask = 0
-        let voxelType = 1
+        let startU = 0
+        let quadMask = 0 >>> 0
+        let currentVoxelType = 0
 
-        for (let u = 0; u <= size; u++) {  
-          const isEdge = u === size
-          const bit = isEdge ? 0 : (binary & (1 << u))
+        for (let u = 0; u < size; u++) {
+          const bitMask = (1 << u) >>> 0
+          const bit = (binary & bitMask) >>> 0
+          if (!bit) continue
+          const reachedEnd = u === size - 1
           
-          let index = 0
-          if (!isEdge) {
-            if (axis === 0) {
-              index = depth + v * size + (u * size * size);
-            }
-            if (axis === 1) {
-              index = u + depth * size + (v * size * size);
-            }
-            if (axis === 2) {
-              index = u + v * size + (depth * size * size);
-            }
+          let currentIndex = 0
+          if (axis === 0 || axis === 1) {
+            currentIndex = depth + v * size + (u * size * size);
           }
-          
-          const newVoxelType = isEdge ? 0 : voxelArray[index]
-          const reachedAir = (!bit && quadMask) || isEdge
-          const voxelSame = newVoxelType === voxelType
+          if (axis === 2 || axis === 3) {
+            currentIndex = u + depth * size + (v * size * size);
+          }
+          if (axis === 4 || axis === 5) {
+            currentIndex = u + v * size + (depth * size * size);
+          }
 
-          if (reachedAir || (!voxelSame && quadMask)) {
-            // Measure height
-            let maxHeight = 0
-            for (let h = v; h < size; h++) {
-              const bitMask = plane[h] & quadMask
-              if (bitMask === quadMask) {
-                maxHeight++
-                plane[h] = plane[h] & ((~quadMask) >>> 0)
-              } else {
-                break
-              }
-            }
-
-            if (width > 0 && maxHeight > 0) {
-              const vertices = getQuadPoints(axis, direction, depth, u - width, v, width, maxHeight)
-              const packedQuad = packVertices(vertices, voxelType, axis, direction, width - 1, maxHeight - 1)
-              packedVertices.push(...packedQuad)
-            }
-
-            width = 0
-            height = 0
-            quadMask = 0
-            
-            if (!isEdge && bit) {
-              voxelType = newVoxelType
-              quadMask |= 1 << u
-              width++
-            }
-          } else if (bit) {
-            voxelType = newVoxelType
-            quadMask |= 1 << u
+          currentVoxelType = voxelArray[currentIndex]
+          if (currentVoxelType) {
+            if (quadMask === 0) startU = u
+            quadMask = (quadMask | bitMask) >>> 0
             width++
           }
+          
+          if (!reachedEnd) {
+            const nextBitMask = (1 << (u + 1)) >>> 0
+            const nextBit = binary & nextBitMask
+
+            let nextIndex = 0
+            if (axis === 0 || axis === 1) {
+              nextIndex = depth + v * size + ((u + 1)  * size * size);
+            }
+            if (axis === 2 || axis === 3) {
+              nextIndex = (u + 1) + depth * size + (v * size * size);
+            }
+            if (axis === 4 || axis === 5) {
+              nextIndex = (u + 1) + v * size + (depth * size * size);
+            }
+
+            const nextVoxelType = voxelArray[nextIndex]
+            if (nextBit && nextVoxelType === currentVoxelType) continue
+          }
+
+          const wipeMask = (~(quadMask >>> 0)) >>> 0
+
+          for (let h = v; h < size; h++) {
+            let voxelSameFlag = true
+            const bitMask = (plane[h] & (quadMask >>> 0)) >>> 0
+            const endU = startU + width
+
+            for (let w = startU; w < endU; w++) {
+              const mask = (1 << w) >>> 0
+              if (!((quadMask >>> 0) & mask)) continue
+              let index = 0
+              if (axis === 0 || axis === 1) {
+                index = depth + h * size + (w * size * size);
+              }
+              if (axis === 2 || axis === 3) {
+                index = w + depth * size + (h * size * size);
+              }
+              if (axis === 4 || axis === 5) {
+                index = w + h * size + (depth * size * size);
+              }
+              const vtype = voxelArray[index]
+              if (vtype !== currentVoxelType) voxelSameFlag = false
+              if (!voxelSameFlag) break
+            }
+
+            if (bitMask === (quadMask >>> 0) && voxelSameFlag) {
+              height++
+              plane[h] &= wipeMask
+            } else {
+              break
+            }
+          }
+
+          const vertices = getQuadPoints(axis, depth, startU, v, width, height)
+          const packedQuad = packVertices(vertices, currentVoxelType, axis, width, height)
+          packedVertices.push(...packedQuad)
+
+          width = 0
+          height = 0
+          quadMask = 0 >>> 0
         }
       }
     }
@@ -508,42 +532,34 @@ export function binaryGreedyMesher(voxelArray: Uint16Array, binaryData: Uint32Ar
   return packedVertices
 }
 
-export function getQuadPoints(axisIndex: number, direction: number, depth: number, u: number, v: number, width: number, height: number) {
+export function getQuadPoints(axisIndex: number, depth: number, u: number, v: number, width: number, height: number) {
   const points: number[][] = []
-  const offsets = ((axisIndex: number, direction: number) =>{
-    if (axisIndex === 0) {
-      return direction 
-        ? [[width, 0], [0, 0], [0, height], [width, height]] // pos x
-        : [[0, 0], [width, 0], [width, height], [0, height]] // neg x
-    }
-    else if (axisIndex === 1) {
-      return direction 
-        ? [[0, 0], [0, height], [width, height], [width, 0]] // pos y
-        : [[0, height], [0, 0], [width, 0], [width, height]] // neg y
-    }
-    else {
-      return direction 
-        ? [[0, 0], [width, 0], [width, height], [0, height]] // pos z
-        : [[width, 0], [0, 0], [0, height], [width, height]] // neg z
-    }
-  })(axisIndex, direction)
+  let offsets: number[][] = []
+  const w = width
+  const h = height
+  if (axisIndex === 0) offsets = [[w, 0], [0, 0], [0, h], [w, h]] // pos x
+  if (axisIndex === 1) offsets = [[0, 0], [w, 0], [w, h], [0, h]] // neg x
+  if (axisIndex === 2) offsets = [[w, 0], [0, 0], [0, h], [w, h]] // pos y
+  if (axisIndex === 3) offsets = [[0, 0], [w, 0], [w, h], [0, h]] // neg y
+  if (axisIndex === 4) offsets = [[0, 0], [w, 0], [w, h], [0, h]] // pos z
+  if (axisIndex === 5) offsets = [[w, 0], [0, 0], [0, h], [w, h]] // neg z
     
   for (let i = 0; i < 4; i++) {
     let x = 0, y = 0, z = 0
-    if (axisIndex === 0) {
-      x = depth + direction
-      y = v + offsets[i][1] 
+    if (axisIndex === 0 || axisIndex === 1) {
+      x = axisIndex % 2 === 0 ? depth + 1 : depth
+      y = v + offsets[i][1]
       z = u + offsets[i][0]
     }
-    if (axisIndex === 1) {
+    if (axisIndex === 2 || axisIndex === 3) {
       x = u + offsets[i][0]
-      y = depth + direction
+      y = axisIndex % 2 === 0 ? depth + 1 : depth
       z = v + offsets[i][1]
     }
-    if (axisIndex === 2) {
+    if (axisIndex === 4 || axisIndex === 5) {
       x = u + offsets[i][0]
       y = v + offsets[i][1]
-      z = depth + direction
+      z = axisIndex % 2 === 0 ? depth + 1 : depth
     }
 
     points.push([x, y, z])
@@ -551,10 +567,10 @@ export function getQuadPoints(axisIndex: number, direction: number, depth: numbe
   return points
 }
 
-export function packVertices(vertices: number[][], voxelType: number, axisIndex: number, direction: number, width: number, height: number) {
+export function packVertices(vertices: number[][], voxelType: number, axisIndex: number, width: number, height: number) {
   const packedVertices: number[][] = []
   const packedQuad: number[] = []
-  const normal = direction ? axisIndex * 2 : axisIndex * 2 + 1
+  const normal = axisIndex
   const vertexOrder = [0, 1, 2, 0, 2, 3]
 
   // x = (uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x
@@ -565,7 +581,7 @@ export function packVertices(vertices: number[][], voxelType: number, axisIndex:
     const [x, y, z] = vertices[i]
     const uv = i
     const packedX = ((uv << 21) | (normal << 18) | (z << 12) | (y << 6) | x) >>> 0
-    const packedY = ((height << 17) | (width << 12) | voxelType) >>> 0
+    const packedY = (((height - 1) << 17) | ((width - 1) << 12) | voxelType) >>> 0
     const packedZ = 0
     packedVertices.push([packedX, packedY, packedZ])
   }
@@ -629,33 +645,21 @@ export function genCrossAxisFacePlanes(
   const planes: Uint32Array[][] = createAxis(chunkSize)
   const axisOffset = chunkSize * chunkSize
 
-  for (let axis = 0; axis < 6; axis++) {
-    const direction = axis % 2 === 0 ? 1 : 0
+  for (let axis = 0; axis < planes.length; axis++) {
     const dataOffset = axis * axisOffset
 
     for (let v = 0; v < chunkSize; v++) {
       for (let u = 0; u < chunkSize; u++) {
         const idx = u + v * chunkSize + dataOffset
-        const depthRow = binaryAxisRows[idx]
+        const binaryVoxel = binaryAxisRows[idx]
 
-        if (depthRow === 0) continue
-        
-        if (direction) {
-          for (let depth = 0; depth < chunkSize; depth++) {
-            const bitPos = chunkSize - 1 - depth
-            const mask = (1 << bitPos) >>> 0
-            const check = (mask & depthRow) >>> 0
-            if (check) {
-              planes[axis][depth][v] |= 1 << u
-            }
-          }
-        } else {
-          for (let depth = 0; depth < chunkSize; depth++) {
-            const mask = (1 << depth) >>> 0
-            const check = (mask & depthRow) >>> 0
-            if (check) {
-              planes[axis][depth][v] |= 1 << u
-            }
+        if (binaryVoxel === 0) continue
+
+        for (let depth = 0; depth < chunkSize; depth++) {
+          const mask = (1 << depth) >>> 0
+          const check = (mask & binaryVoxel) >>> 0
+          if (check) {
+            planes[axis][depth][v] |= 1 << u
           }
         }
       }

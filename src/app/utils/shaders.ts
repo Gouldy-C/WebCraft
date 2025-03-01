@@ -108,7 +108,7 @@ out vec4 fragColor;
 
 void main() {
   vec2 uv = fract(vertexUV * vec2(quadWidth + 1.0, quadHeight + 1.0));
-  vec4 texColor = texture(uTextureArray, vec3(vertexUV, textureIndex));
+  vec4 texColor = texture(uTextureArray, vec3(uv, textureIndex));
   fragColor = texColor;
 
 	// vec3 debugNormal = normalize(vertexNormal) * 0.5 + 0.5;
