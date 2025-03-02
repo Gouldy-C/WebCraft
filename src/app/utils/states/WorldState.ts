@@ -14,10 +14,10 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    seed: crypto.randomUUID(),
+    seed: crypto.randomUUID(),// "default", // crypto.randomUUID(),
     chunkSize: 32,
-    maxWorldHeight: 448,
-    hDrawDist: 15, 
+    maxWorldHeight: 32 * 16, // chunkSize * 12
+    hDrawDist: 10, 
     vDrawDist: 0,
     terrainSampleRate: 4,
 
@@ -29,13 +29,13 @@ export const defaultWorldStore: WorldStore = {
       persistence: 0.5,
     },
 
-    seaLevel: 90,
-    mountainHeight: 300,
-    mountainVariance: 25,
+    seaLevel: 100,
+    mountainHeight: 310,
+    mountainVariance: 30,
     snowHeight: 330,
     snowVariance: 30,
-    dirtVariance: 30,
-    sandVariance: 5,
+    dirtVariance: 20,
+    sandVariance: 6,
 
     trees: {
       trunk: {

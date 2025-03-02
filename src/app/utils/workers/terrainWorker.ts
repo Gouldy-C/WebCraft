@@ -22,8 +22,8 @@ export interface RequestGeometryData {
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "genChunkVoxelData") {
-    // measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
-    genVoxelData(e.data)
+    measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
+    // genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
     // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
@@ -51,10 +51,13 @@ function genVoxelData(message: WorkerPostMessage) {
 
 
   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
+  const detailNoise = new FractalNoise(params.fractalNoise, params.seed + "detail")
+
   const dirtNoise = SimplexNoise.createNoise2D(RNG(params.seed + "dirtLayer"));
   const mountainNoise = SimplexNoise.createNoise2D(RNG(params.seed + "mountainLayer"));
   const snowNoise = SimplexNoise.createNoise2D(RNG(params.seed + "snowLayer"));
   const sandNoise = SimplexNoise.createNoise2D(RNG(params.seed + "sandLayer"));
+  const biomeNoise = SimplexNoise.createNoise2D(RNG(params.seed + "biome"));
 
   const mountainOffset = params.mountainHeight
   const mountianChange = params.mountainVariance
@@ -150,13 +153,11 @@ function genVoxelData(message: WorkerPostMessage) {
     for (let x = 0; x < size; x++) {
       const wx = wCoords.x + x;
       const mapIndex = x + zOffset;
-      const terrainHeight = heightMap[mapIndex];
+      let terrainHeight = heightMap[mapIndex];
       const dirtDepth = dirtNoiseMap[mapIndex];
       const mountainHeight = mountainNoiseMap[mapIndex];
       const snowValue = snowNoiseMap[mapIndex];
       const sandDepth = sandNoiseMap[mapIndex];
-
-
       
       for (let y = 0; y < size; y++) {
         const wy = wCoords.y + y;

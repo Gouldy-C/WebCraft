@@ -96,6 +96,7 @@ export class TextureArrayBuilder {
     const rawTextureConfig = []
 
     let textureIndex = 0;
+    const ctx = this.canvas.getContext("2d", { willReadFrequently: true });
 
     for (const key of keys) {
       const textures = this.texturesMap.get(key);
@@ -108,7 +109,6 @@ export class TextureArrayBuilder {
         if (!texture) throw new Error(`Null texture: ${this.textureArrayName}, ${key}, ${textureIndex}`);
 
         const colorMask = texture.userData.colorMask;
-        const ctx = this.canvas.getContext("2d");
 
         if (!ctx) throw new Error(`Canvas context not available textureArray: ${this.textureArrayName}`);
         

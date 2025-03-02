@@ -164,7 +164,6 @@ export class Chunk {
       this.terrainManager.add(this.mesh)
     }
 
-
     this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
     this.mesh.geometry.setAttribute('position', bufferAttribute)
     this.mesh.geometry.computeBoundingSphere()
