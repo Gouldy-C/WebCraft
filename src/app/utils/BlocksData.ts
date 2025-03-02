@@ -117,8 +117,12 @@ export const BLOCKS: Record<string, Block> = {
     transparent: true,
     textures: ['/textures/blocks/leaves_oak_carried.tga'],
   },
-  
-
+  gravel: {
+    id: 14,
+    name: 'gravel',
+    transparent: false,
+    textures: ['/textures/blocks/gravel.png'],
+  }
 };
 
 export const blockIDToBlock: Record<number, Block> = Object.values(BLOCKS).reduce((acc, block) => {
