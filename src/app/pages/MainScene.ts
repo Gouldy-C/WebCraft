@@ -69,7 +69,7 @@ export class MainScene extends THREE.Scene {
       this.renderer.setPixelRatio(window.devicePixelRatio);
       this.world.orbitCamera.aspect = window.innerWidth / window.innerHeight;
       this.world.orbitCamera.updateProjectionMatrix();
-      this.world.controls.update()
+      // this.world.controls.update()
       // this.world.player.camera.aspect = window.innerWidth / window.innerHeight;
       // this.world.player.camera.updateProjectionMatrix();
     });

@@ -10,18 +10,18 @@ export interface WorldStore {
 }
 
 const CHUNK_SIZE = 32;
-const SURFACE_HEIGHT = CHUNK_SIZE * 14;
+const SURFACE_HEIGHT = CHUNK_SIZE * 16;
 
 export const defaultWorldStore: WorldStore = {
   time: { time: 0, days: 0, years: 0, minutesInDay: 20, daysInYear: 365 },
   objects: {},
   players: {},
   terrain: {
-    seed: crypto.randomUUID(),// "default", // crypto.randomUUID(),
+    seed: "default",
     chunkSize: CHUNK_SIZE,
-    maxWorldHeight: SURFACE_HEIGHT, // chunkSize * 12
-    hDrawDist: 30, 
-    vDrawDist: 0,
+    maxWorldHeight: SURFACE_HEIGHT,
+    hDrawDist: 10, 
+    vDrawDist: 1,
     terrainSampleRate: 4,
 
     fractalNoise: {
@@ -34,7 +34,7 @@ export const defaultWorldStore: WorldStore = {
 
     seaLevel: 0.25 * SURFACE_HEIGHT,
     mountainHeight: 0.65 * SURFACE_HEIGHT,
-    snowHeight: 0.75 * SURFACE_HEIGHT,
+    snowHeight: 0.72 * SURFACE_HEIGHT,
     mountainVariance: 30,
     snowVariance: 30,
     dirtVariance: 20,

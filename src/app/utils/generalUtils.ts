@@ -188,14 +188,18 @@ export function spiralChunkKeys(
   const keys: Set<string> = new Set();
   
   function addYVariants(x: number, z: number) {
-    let maxY = vDrawDist
-    if (startCoords.y >= -2 && startCoords.y <= 0) maxY = vertChunks + Math.abs(startCoords.y)
-    else if (startCoords.y >= 1) maxY = vertChunks
-    for (let y = -vDrawDist; y <= maxY; y++) {
+    let maxY = vertChunks
+    let minY = 0
+    if (startCoords.y < 0) maxY = vDrawDist + startCoords.y
+    else if (startCoords.y >= 0) {
+      maxY = vertChunks
+      minY = 0
+    }
+    for (let y = 0; y <= maxY; y++) {
       keys.add(
         keyFromXYZCoords(
           startCoords.x + x,
-          startCoords.y + y,
+          y,
           startCoords.z + z
         )
       );
@@ -306,14 +310,3 @@ export function smootherStep(t: number, start: number, end: number) {
   t = t * t * t * (t * (t * 6 - 15) + 10);
   return t * (end - start) + start;
 }
-
-// For 64-bit operations, use BigInt
-// const value64 = BigInt("0b1111111111111111111111111111111111111111111111111111111111111111");
-
-// Bitwise operations with BigInt
-// const leftShift = value64 << 1n;     // Left shift
-// const rightShift = value64 >> 1n;    // Right shift
-// const and = value64 & (1n << 32n);   // AND
-// const or = value64 | (1n << 32n);    // OR
-// const xor = value64 ^ (1n << 32n);   // XOR
-// const not = ~value64;                // NOT

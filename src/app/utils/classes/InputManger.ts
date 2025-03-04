@@ -31,13 +31,13 @@ interface InputConfig {
 export class InputManager {
   private domElement: HTMLElement;
   private activeKeys: Set<string>;
+  private mousePos: THREE.Vector2
   private mouseButtons: Set<number>;
   private mouseDelta: THREE.Vector2;
+  private mouseWheelDelta: THREE.Vector2
   private currentConfig: InputConfig;
   private defaultConfig: InputConfig;
-  private mouseWheelDelta: THREE.Vector2
 
-  // Binding events
   private boundKeyDown: (event: KeyboardEvent) => void;
   private boundKeyUp: (event: KeyboardEvent) => void;
   private boundMouseDown: (event: MouseEvent) => void;
@@ -49,10 +49,10 @@ export class InputManager {
     this.domElement = domElement;
     this.activeKeys = new Set();
     this.mouseButtons = new Set();
+    this.mousePos = new THREE.Vector2();
     this.mouseDelta = new THREE.Vector2();
     this.mouseWheelDelta = new THREE.Vector2()
 
-    // Set up default configuration
     this.defaultConfig = {
       [InputAction.MOVE_FORWARD]: { keyboard: 'KeyW' },
       [InputAction.MOVE_BACKWARD]: { keyboard: 'KeyS' },
@@ -60,7 +60,7 @@ export class InputManager {
       [InputAction.MOVE_RIGHT]: { keyboard: 'KeyD' },
       [InputAction.JUMP]: { keyboard: 'Space' },
       [InputAction.SPRINT]: { keyboard: 'ShiftLeft' },
-      [InputAction.CROUCH]: { keyboard: 'ControlLeft' },
+      [InputAction.CROUCH]: { keyboard: 'KeyC' },
       [InputAction.INTERACT]: { keyboard: 'KeyE' },
       [InputAction.PRIMARY_ACTION]: { mouse: 'left' },
       [InputAction.SECONDARY_ACTION]: { mouse: 'right' },
@@ -113,6 +113,9 @@ export class InputManager {
   }
 
   private onMouseMove(event: MouseEvent): void {
+    this.mousePos.x = event.x
+    this.mousePos.y = event.y
+
     this.mouseDelta.x = event.movementX || 0;
     this.mouseDelta.y = event.movementY || 0;
   }
@@ -120,10 +123,8 @@ export class InputManager {
   private onMouseWheel(event: WheelEvent): void {
     this.mouseWheelDelta.y = event.deltaY || 0;
     this.mouseWheelDelta.x = event.deltaX || 0;
-
   }
 
-  // Check if a specific action is currently active
   public isActionActive(action: InputAction): boolean {
     const binding = this.currentConfig[action];
     
@@ -144,7 +145,6 @@ export class InputManager {
     return false;
   }
 
-  // Get mouse movement delta
   public getMouseDelta(): THREE.Vector2 {
     const delta = this.mouseDelta.clone();
     this.mouseDelta.set(0, 0);
@@ -157,7 +157,6 @@ export class InputManager {
     return delta;
   }
 
-  // Remap a key or mouse button for a specific action
   public remapAction(action: InputAction, newKey?: string, newMouseButton?: string): void {
     const currentConfig = this.currentConfig[action];
     
@@ -169,28 +168,23 @@ export class InputManager {
       currentConfig.mouse = newMouseButton;
     }
 
-    // Optionally, save to local storage
     this.saveConfigToLocalStorage();
   }
 
-  // Reset a specific action to its default binding
   public resetActionToDefault(action: InputAction): void {
     this.currentConfig[action] = this.defaultConfig[action];
     this.saveConfigToLocalStorage();
   }
 
-  // Reset all actions to default bindings
   public resetAllToDefaults(): void {
     this.currentConfig = JSON.parse(JSON.stringify(this.defaultConfig));
     this.saveConfigToLocalStorage();
   }
 
-  // Save current configuration to local storage
   private saveConfigToLocalStorage(): void {
     localStorage.setItem('gameInputConfig', JSON.stringify(this.currentConfig));
   }
 
-  // Load configuration from local storage
   public loadConfigFromLocalStorage(): void {
     const savedConfig = localStorage.getItem('gameInputConfig');
     if (savedConfig) {
@@ -200,6 +194,10 @@ export class InputManager {
 
   public getActiveKeys(): Set<string> {
     return this.activeKeys;
+  }
+
+  public getMousePos(): THREE.Vector2 {
+    return this.mousePos
   }
 
   public getCurrentlyPressedActions(exclude = [InputAction.PAUSE, InputAction.PRIMARY_ACTION, InputAction.SECONDARY_ACTION]): InputAction[] {
@@ -215,7 +213,6 @@ export class InputManager {
     return pressedActions;
   }
 
-  // Cleanup method to remove event listeners
   public dispose(): void {
     this.domElement.removeEventListener('keydown', this.boundKeyDown);
     this.domElement.removeEventListener('keyup', this.boundKeyUp);

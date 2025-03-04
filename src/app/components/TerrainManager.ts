@@ -115,7 +115,7 @@ export class TerrainManager extends THREE.Object3D {
       this.currentChunk,
       this.hDrawDist,
       this.vDrawDist,
-      Math.ceil(this.params.maxWorldHeight / this.chunkSize) - 1
+      Math.ceil(this.params.maxWorldHeight / this.chunkSize)
     );
   }
 
@@ -124,25 +124,29 @@ export class TerrainManager extends THREE.Object3D {
     const chunk = this.chunks.get(id);
     if (chunk) chunk.handleWorkerMessage(obj);
     else
-      throw new Error("Chunk not found, in TerrainManager.handleWorkerMessage");
+      throw new Error(`Chunk not found, in TerrainManager.handleWorkerMessage ${id}`);  
   }
 
   _updateChunks(addedChunks: Set<string>, removedChunks: Set<string>) {
+    for (const chunkKey of addedChunks) {
+      if (this.chunks.has(chunkKey)) continue;
+      const chunk = this.chunkPool.pop();
+      if (chunk) {
+        chunk.reuseChunk(this, chunkKey);
+        this.chunks.set(chunkKey, chunk)
+      }
+      else this.chunks.set(chunkKey, new Chunk(this, chunkKey));
+      this.activeChunks.add(chunkKey);
+    }
     for (const chunkKey of removedChunks) {
       const chunk = this.chunks.get(chunkKey);
+      this.workerQueue.removeRequest(chunkKey)
       if (chunk) {
         chunk.clear();
         this.chunkPool.push(chunk);
       }
       this.chunks.delete(chunkKey);
       this.activeChunks.delete(chunkKey);
-    }
-    for (const chunkKey of addedChunks) {
-      if (this.chunks.has(chunkKey)) continue;
-      const chunk = this.chunkPool.pop();
-      if (chunk) chunk.reuseChunk(this, chunkKey);
-      else this.chunks.set(chunkKey, new Chunk(this, chunkKey));
-      this.activeChunks.add(chunkKey);
     }
   }
 
