@@ -23,7 +23,6 @@ export function RNG(seed: string | number) {
 }
 
 // Basic Utils
-
 export function getDirections(num: number) {
   return [
     { dx: num, dy: 0, dz: 0 },
@@ -36,7 +35,6 @@ export function getDirections(num: number) {
 }
 
 // Indexing in a Chunk
-
 export function indexFromXYZCoords(
   x: number,
   y: number,
@@ -46,7 +44,7 @@ export function indexFromXYZCoords(
   const voxelX = ((x % chunkSize) + chunkSize) % chunkSize | 0;
   const voxelZ = ((z % chunkSize) + chunkSize) % chunkSize | 0;
   const voxelY = ((y % chunkSize) + chunkSize) % chunkSize | 0;
-  return voxelY * (chunkSize * chunkSize) + voxelZ * chunkSize + voxelX;
+  return voxelX + (voxelY * chunkSize) + (voxelZ * chunkSize * chunkSize)
 }
 
 export function coordsFromIndex(
@@ -54,13 +52,12 @@ export function coordsFromIndex(
   chunkSize: number
 ): { x: number; y: number; z: number } {
   const x = index % chunkSize;
-  const z = Math.floor(index / chunkSize) % chunkSize;
-  const y = Math.floor(index / (chunkSize * chunkSize)) % chunkSize;
+  const y = Math.floor(index / chunkSize) % chunkSize;
+  const z = Math.floor(index / (chunkSize * chunkSize)) % chunkSize;
   return { x, y, z };
 }
 
 // Getting Keys/ Ids and parsing Keys/ Ids
-
 export function chunkKeyFromXYZ(
   x: number,
   y: number,
@@ -83,16 +80,12 @@ export function keyFromXYZCoords(x: number, y: number, z: number): string {
   return `${x},${y},${z}`;
 }
 
-export function coordsXYZFromKey(key: string): {
-  x: number;
-  y: number;
-  z: number;
-} {
+export function coordsXYZFromKey(key: string): {x: number, y: number, z: number} {
   const [x, y, z] = key.split(",");
   return { x: +x, y: +y, z: +z };
 }
 
-export function coordsXZFromKey(key: string): { x: number; z: number } {
+export function coordsXZFromKey(key: string): { x: number, z: number } {
   const [x, z] = key.split(",");
   return { x: +x, z: +z };
 }
@@ -119,18 +112,6 @@ export function chunkCoordsWithResolutionFromKey(key: string): {
 export function generateUniquePlayerID() {
   return `player_${crypto.randomUUID()}`;
 }
-
-// Voxel Utils
-// export function getHeightOfBlock(x: number, z: number, params: TerrainGenParams): number {
-//   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
-//   const value = fractalNoise.fractal2D(x, z);
-//   const adjustedHeight = Math.min(
-//     Math.floor(params.chunkSize * value),
-//     params.chunkSize - 1
-//   );
-//   const height = Math.max(0, adjustedHeight);
-//   return height;
-// }
 
 // Coordinates Conversions
 
@@ -190,12 +171,11 @@ export function spiralChunkKeys(
   function addYVariants(x: number, z: number) {
     let maxY = vertChunks
     let minY = 0
-    if (startCoords.y < 0) maxY = vDrawDist + startCoords.y
-    else if (startCoords.y >= 0) {
-      maxY = vertChunks
-      minY = 0
+    if (startCoords.y < 0) {
+      maxY = startCoords.y + vDrawDist
+      minY = startCoords.y - vDrawDist
     }
-    for (let y = 0; y <= maxY; y++) {
+    for (let y = minY; y <= maxY; y++) {
       keys.add(
         keyFromXYZCoords(
           startCoords.x + x,
@@ -227,7 +207,6 @@ export function spiralChunkKeys(
 }
 
 // Object Utils
-
 export function objectDifference(
   objA: Record<string, any>,
   objB: Record<string, any>
@@ -255,7 +234,6 @@ export function objectIntersection(
 }
 
 // Set Utils
-
 export function setDifference<T>(setA: Set<T>, setB: Set<T>): Set<T> {
   const _difference = new Set<T>();
   for (const elem of setA) {
@@ -276,37 +254,10 @@ export function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
 }
 
 // Math Utils
-
-export function clamp(value: number, lowerBound: number, upperBound: number) {
-  return Math.min(Math.max(value, lowerBound), upperBound);
-}
-
 export function normalize(
   currentValue: number,
   minValue: number,
   maxValue: number
 ) {
   return (2 * (currentValue - minValue)) / (maxValue - minValue) - 1;
-}
-
-export function randRange(minValue: number, maxValue: number) {
-  return Math.random() * (maxValue - minValue) + minValue;
-}
-
-export function randInt(minValue: number, maxValue: number) {
-  return Math.round(Math.random() * (maxValue - minValue) + minValue);
-}
-
-export function lerp(t: number, start: number, end: number) {
-  return t * (end - start) + start;
-}
-
-export function smoothStep(t: number, start: number, end: number) {
-  t = t * t * (3.0 - 2.0 * t);
-  return t * (end - start) + start;
-}
-
-export function smootherStep(t: number, start: number, end: number) {
-  t = t * t * t * (t * (t * 6 - 15) + 10);
-  return t * (end - start) + start;
 }

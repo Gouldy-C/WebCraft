@@ -177,7 +177,7 @@ function genVoxelData(message: WorkerPostMessage) {
         
         // todo: add support for block chnages by players via the diffs map
 
-        const index = x + y * size + z * size * size;
+        const index = x + (y * size) + (z * size * size);
         voxelData[index] = blockId;
   
         if (blockId !== BLOCKS.air.id) {
