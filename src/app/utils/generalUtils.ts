@@ -254,10 +254,22 @@ export function setIntersection<T>(setA: Set<T>, setB: Set<T>): Set<T> {
 }
 
 // Math Utils
-export function normalize(
+export function normalizeNegOneBased(
   currentValue: number,
   minValue: number,
   maxValue: number
 ) {
-  return (2 * (currentValue - minValue)) / (maxValue - minValue) - 1;
+  if (maxValue === minValue) return 0.5
+  const normalized = 2 * ((currentValue - minValue) / (maxValue - minValue)) - 1;
+  return Math.max(-1, Math.min(1, normalized))
+}
+
+export function normalizeZeroBased(
+  currentValue: number,
+  minValue: number,
+  maxValue: number
+) {
+  if (maxValue === minValue) return 0.5
+  const normalized = (currentValue - minValue) / (maxValue - minValue);
+  return Math.max(0, Math.min(1, normalized))
 }

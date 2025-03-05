@@ -21,7 +21,7 @@ export class World extends THREE.Group {
   ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
 
   accumulator: number = 0;
-  simulationRate: number = 480;
+  simulationRate: number = 120;
   timeStep: number = 1 / this.simulationRate;
 
   worldStore: DataStore<WorldStore> = new DataStore(defaultWorldStore);
@@ -52,12 +52,6 @@ export class World extends THREE.Group {
     );
     this.orbitCamera.updateProjectionMatrix();
     this.orbitCamera.updateMatrixWorld();
-    // const center = this.params.terrain.chunkSize / 2;
-    // this.orbitCamera.position.set(
-    //   center,
-    //   this.params.terrain.vDrawDist * this.params.terrain.chunkSize,
-    //   center
-    // );
 
     // this.controls = new OrbitControls(
     //   this.orbitCamera,
@@ -66,6 +60,7 @@ export class World extends THREE.Group {
 
     this.activeCamera = this.orbitCamera;
     this.cameraGroup = new THREE.Group()
+    this.cameraGroup.position.set(0, params.terrain.maxWorldHeight, 0);
     this.cameraGroup.add(this.activeCamera);
     this.add(this.cameraGroup)
     // this.sun.lookAt(0, 0, 0);
@@ -85,32 +80,35 @@ export class World extends THREE.Group {
 
   update(dt: number) {
     this.accumulator += dt;
-    
-    if (this.scene.inputManager.isActionActive(InputAction.PRIMARY_ACTION)){
-      const mouseDelta = this.scene.inputManager.getMouseDelta()
-      this.cameraGroup.rotateY(-(mouseDelta.x / 50))
-      this.orbitCamera.rotateX(-(mouseDelta.y / 50))
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.MOVE_FORWARD)){
-      this.cameraGroup.translateZ(-0.25)
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.MOVE_BACKWARD)){
-      this.cameraGroup.translateZ(0.25)
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.MOVE_LEFT)){
-      this.cameraGroup.translateX(-0.25)
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.MOVE_RIGHT)){
-      this.cameraGroup.translateX(0.25)
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.JUMP)){
-      this.cameraGroup.translateY(0.5)
-    }
-    if (this.scene.inputManager.isActionActive(InputAction.CROUCH)){
-      this.cameraGroup.translateY(-0.5)
+    while (this.accumulator >= this.timeStep) {
+      this.accumulator -= this.timeStep;
+      if (this.scene.inputManager.isActionActive(InputAction.PRIMARY_ACTION)){
+        const mouseDelta = this.scene.inputManager.getMouseDelta()
+        this.cameraGroup.rotateY(-(mouseDelta.x / 50))
+        this.orbitCamera.rotateX(-(mouseDelta.y / 50))
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.MOVE_FORWARD)){
+        this.cameraGroup.translateZ(-0.18)
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.MOVE_BACKWARD)){
+        this.cameraGroup.translateZ(0.18)
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.MOVE_LEFT)){
+        this.cameraGroup.translateX(-0.18)
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.MOVE_RIGHT)){
+        this.cameraGroup.translateX(0.18)
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.JUMP)){
+        this.cameraGroup.translateY(0.18)
+      }
+      if (this.scene.inputManager.isActionActive(InputAction.CROUCH)){
+        this.cameraGroup.translateY(-0.18)
+      }
     }
     this.terrain.update(this.cameraGroup.position);
   }
+    
 
   getVoxel(x: number, y: number, z: number) {
     return this.terrain.getVoxel(x, y, z);

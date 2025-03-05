@@ -2,6 +2,8 @@ import { TerrainGenParams } from "../components/TerrainManager";
 import { blockIDToBlock, BLOCKS, Resource} from "./BlocksData";
 import * as SimplexNoise from "simplex-noise";
 import { FractalNoise } from "./classes/FractalNoise";
+import * as THREE from "three";
+import { normalizeZeroBased } from "./generalUtils";
 
 export interface ResourceGenerator {
   noise3D: SimplexNoise.NoiseFunction3D;
@@ -22,31 +24,70 @@ export function terrainHeight(
   const value = heightMap[pos.x + pos.z * params.chunkSize];
   if (value === 0) {
     const noiseValue = fractalNoise.fractal2D(pos.x + wCoords.x, pos.z + wCoords.z);
-    const heightValue = (noiseValue + 1) / 2;
-    const blockHeight = Math.floor(heightValue * params.maxWorldHeight);
-    heightMap[pos.x + pos.z * params.chunkSize] = blockHeight;
-    return blockHeight;
-  }
-  return value;
-}
-
-export function terrainNoiseValue(
-  pos: { x: number; z: number },
-  maxHeight: number,
-  noiseMap: Uint16Array,
-  params: TerrainGenParams,
-  noiseFunc: SimplexNoise.NoiseFunction2D,
-  wCoords: { x: number; y: number; z: number }
-) {
-  const value = noiseMap[pos.x + pos.z * params.chunkSize];
-  if (value === 0) {
-    const noiseValue = noiseFunc((pos.x + wCoords.x) / 80, (pos.z + wCoords.z) / 80);
-    const heightValue = (noiseValue + 1) / 2;
-    const res = Math.floor(heightValue * maxHeight);
+    const res = normalizeZeroBased(noiseValue, -1, 1) * params.maxWorldHeight;
+    heightMap[pos.x + pos.z * params.chunkSize] = res;
     return res;
   }
   return value;
 }
+
+export function noiseValue2D(
+  params: TerrainGenParams,
+  noiseArray: Float32Array,
+  noiseFunc: SimplexNoise.NoiseFunction2D,
+  voxelPos: { x: number; z: number },
+  chunkPos: { x: number; y: number; z: number },
+  scale: { x: number; z: number }
+
+) {
+  const value = noiseArray[voxelPos.x + voxelPos.z * params.chunkSize];
+  if (value === 0) {
+    const noiseValue = noiseFunc((voxelPos.x + chunkPos.x) / scale.x, (voxelPos.z + chunkPos.z) / scale.z);
+    noiseArray[voxelPos.x + voxelPos.z * params.chunkSize] = noiseValue;
+    return noiseValue;
+  }
+  return value;
+}
+
+export function noise2DBiLerp(
+  params: TerrainGenParams,
+  cacheArray: Float32Array,
+  noiseFn: SimplexNoise.NoiseFunction2D,
+  voxelPos: { x: number, z: number },
+  chunkPos: { x: number, y: number, z: number },
+  scale: { x: number, z: number }
+) {
+  const sampleRate: number = params.terrainSampleRate;
+  const size = params.chunkSize;
+  const x = voxelPos.x
+  const z = voxelPos.z
+
+  const sampleX = Math.floor(x  / sampleRate) * sampleRate;
+  const sampleZ = Math.floor(z / sampleRate) * sampleRate;
+
+  const nextSampleX = Math.min(sampleX + sampleRate, size - 1);
+  const nextSampleZ = Math.min(sampleZ + sampleRate, size - 1);
+
+  const intervalX = nextSampleX - sampleX;
+  const intervalZ = nextSampleZ - sampleZ;
+  const tX = intervalX === 0 ? 0 : (x - sampleX) / intervalX;
+  const tZ = intervalZ === 0 ? 0 : (z - sampleZ) / intervalZ;
+
+  const smoothTX = THREE.MathUtils.smootherstep(tX, 0, 1);
+  const smoothTZ = THREE.MathUtils.smootherstep(tZ, 0, 1);
+
+  const heightValueA = noiseValue2D( params, cacheArray, noiseFn, { x: sampleX, z: sampleZ }, chunkPos, scale);
+  const heightValueB = noiseValue2D(params, cacheArray, noiseFn, { x: nextSampleX, z: sampleZ }, chunkPos, scale);
+  const heightValueC = noiseValue2D(params, cacheArray, noiseFn, { x: sampleX, z: nextSampleZ }, chunkPos, scale);
+  const heightValueD = noiseValue2D(params, cacheArray, noiseFn, { x: nextSampleX, z: nextSampleZ }, chunkPos, scale);
+
+  const heightValueX = THREE.MathUtils.lerp(heightValueA, heightValueB, smoothTX);
+  const heightValueZ = THREE.MathUtils.lerp(heightValueC, heightValueD, smoothTX);
+  const heightValue = THREE.MathUtils.lerp(heightValueX, heightValueZ, smoothTZ);
+
+  cacheArray[x + z * size] = heightValue;
+}
+
 
 export function getTerrainXYZ(
   pos: { x: number; y: number; z: number },
@@ -70,174 +111,6 @@ export function getTerrainXYZ(
 
   return BLOCKS.air.id;
 }
-
-// isTreeAtXYZ(
-  //   x: number,
-  //   y: number,
-  //   z: number,
-  //   params: TerrainGenParams,
-  //   heights?: { surfaceHeight: number; heightValue: number }
-  // ) {
-  //   const { surfaceHeight } = heights ? heights : this.getHeightsXYZ(x, y, z);
-  //   if (y <= surfaceHeight || y > surfaceHeight + params.trees.trunk.maxHeight)
-  //     return false;
-  //   const width = params.chunkSize.width;
-  //   const treeBuffer = params.trees.buffer;
-  //   const density = params.trees.density;
-  //   if (
-  //     Math.abs(x % width) < treeBuffer ||
-  //     Math.abs(x % width) > width - treeBuffer
-  //   )
-  //     return false;
-  //   if (
-  //     Math.abs(z % width) < treeBuffer ||
-  //     Math.abs(z % width) > width - treeBuffer
-  //   )
-  //     return false;
-  //   const rng = RNG(params.seed + "tree" + keyFromXZCoords(x, z));
-  //   if (rng.fract53() < density) return true;
-  //   return false;
-  // }
-
-  // generateTreeXYZ(
-  //   x: number,
-  //   y: number,
-  //   z: number,
-  //   heights?: { surfaceHeight: number; heightValue: number }
-  // ) {
-  //   const { surfaceHeight } = heights ? heights : this.getHeightsXYZ(x, y, z);
-  //   if (y <= surfaceHeight) return null;
-  //   const { maxHeight, minHeight } = this.params.trees.trunk;
-  //   const trunkHeight = Math.round(
-  //     RNG(this.params.seed + "tree" + keyFromXZCoords(x, z)).fract53() *
-  //       (maxHeight - minHeight) +
-  //       minHeight
-  //   );
-  //   if (y > trunkHeight + surfaceHeight) return null;
-  //   return BLOCKS.oak_log.id;
-  // }
-
-  // generateCanopyXYZ(x: number, y: number, z: number, trunkHeight: number) {
-  //   const offsets = 0;
-  //   const { maxRadius, minRadius } = this.params.trees.canopy;
-  //   const radius = Math.round(
-  //     RNG(this.params.seed + "tree" + x + z).fract53() *
-  //       (maxRadius - minRadius) +
-  //       minRadius
-  //   );
-  //   const canopyMinY = y + trunkHeight - radius + offsets;
-  //   const canopyMaxY = y + trunkHeight + radius * 2 + offsets;
-  //   const canopyCoords: { x: number; y: number; z: number }[] = [];
-
-  //   for (let dy = canopyMinY; dy <= canopyMaxY; dy++) {
-  //     for (let dx = -radius; dx <= radius; dx++) {
-  //       for (let dz = -radius; dz <= radius; dz++) {
-  //         const distance = dx * dx + dy * dy + dz * dz <= radius * radius;
-  //         if (
-  //           distance &&
-  //           RNG(
-  //             this.params.seed + "tree" + keyFromXZCoords(x + dx, z + dz)
-  //           ).fract53() < 0.75
-  //         ) {
-  //           canopyCoords.push({ x: x + dx, y: y + dy, z: z + dz });
-  //         }
-  //       }
-  //     }
-  //   }
-  //   return canopyCoords;
-  // }
-
-
-
-// export function getResourceXYZ(
-//   pos: { x: number; y: number; z: number },
-//   resources: ResourceGenerator[]
-// ) {
-//   for (let i = 0; i < resources.length; i++) {
-//     const resource = resources[i];
-//     const scaleY = resource.scaleY;
-//     const scaleZ = resource.scaleZ;
-//     const scaleX = resource.scaleX;
-//     const scarcity = resource.scarcity;
-
-//     const yS = pos.y / scaleY;
-//     const zS = pos.z / scaleZ;
-//     const xS = pos.x / scaleX;
-
-//     const value = resource.noise3D(xS, yS, zS);
-
-//     if (value > scarcity) {
-//       return resource.resource.id;
-//     }
-//   }
-//   return null;
-// }
-
-// export function generateResources(params: TerrainGenParams) {
-//   return RESOURCES.map((resource) => {
-//     return {
-//       noise3D: SimplexNoise.createNoise3D(RNG(params.seed + resource.name)),
-//       resource,
-//       scaleX: resource.scale.x,
-//       scaleY: resource.scale.y,
-//       scaleZ: resource.scale.z,
-//       scarcity: resource.scarcity,
-//     };
-//   });
-// }
-
-// export async function generateTrees(
-//   chunkX: number,
-//   chunkZ: number,
-//   params: TerrainGenParams,
-//   blocksData: Uint16Array
-// ) {
-//   const treeBuffer = 3
-//   let surfaceY = 0
-//   let trunkHeight = 0
-//   function generateTrunk(x: number, z: number) {
-//     const random = RNG(params.seed + `${keyFromXZCoords(chunkX, chunkZ)}<>${keyFromXZCoords(x, z)}-trunk`).fract53();
-//     trunkHeight = Math.round(random * (params.trees.trunk.maxHeight - params.trees.trunk.minHeight) + params.trees.trunk.minHeight)
-//     for (let y = 0; y < params.chunkSize.height; y++) {
-//       const index = indexFromXYZCoords(x, y, z, params.chunkSize.width, params.chunkSize.height);
-//       if (blocksData[index] === BLOCKS.grass.id || blocksData[index] === BLOCKS.snow_dirt.id) {
-//         surfaceY = y
-//         break
-//       }
-//     }
-//     for (let y = surfaceY; y < surfaceY + trunkHeight; y++) {
-//       const index = indexFromXYZCoords(x, y, z, params.chunkSize.width, params.chunkSize.height);
-//       blocksData[index] = BLOCKS.oak_log.id;
-//     }
-//   }
-//   function generateCanopy(x: number, z: number) {
-//     const random = RNG(params.seed + `${keyFromXZCoords(chunkX, chunkZ)}<>${keyFromXZCoords(x, z)}-canopy`).fract53();
-//     const radius = Math.round(random * (params.trees.canopy.maxRadius - params.trees.canopy.minRadius) + params.trees.canopy.minRadius);
-//     for (let dx = -radius; dx <= radius; dx++) {
-//       for (let dy = 0; dy <= radius; dy++) {
-//         for (let dz = -radius; dz <= radius; dz++) {
-//           const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-//           if (distance <= radius && Math.random() < 0.6) {
-//             const y = surfaceY + trunkHeight + dy -1;
-//             const index = indexFromXYZCoords(x + dx, y, z + dz, params.chunkSize.width, params.chunkSize.height);
-//             if (blocksData[index] === BLOCKS.air.id) {
-//               blocksData[index] = BLOCKS.oak_leaves.id;
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   for (let x = treeBuffer; x < params.chunkSize.width - treeBuffer; x++) {
-//     for (let z = treeBuffer; z < params.chunkSize.width - treeBuffer; z++) {
-//       if (RNG(params.seed + `${keyFromXZCoords(chunkX, chunkZ)}<>${keyFromXZCoords(x, z)}-tree`).fract53() < params.trees.density) {
-//         generateTrunk(x, z);
-//         generateCanopy(x, z);
-//       }
-//     }
-//   }
-// }
 
 function getCoordsForAdjacentVoxel(x: number, y: number, z: number, size: number) {
   const adjacentCoords = [

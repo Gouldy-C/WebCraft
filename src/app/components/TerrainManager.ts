@@ -14,6 +14,7 @@ import { Chunk } from "./Chunk";
 import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
+import { displayNoiseMapImage, TerrainMaps } from "../utils/classes/TerrainMaps";
 
 export interface TerrainGenParams {
   seed: string;
@@ -27,11 +28,8 @@ export interface TerrainGenParams {
 
   seaLevel: number;
   mountainHeight: number;
-  mountainVariance: number;
   snowHeight: number;
-  snowVariance: number;
-  dirtVariance: number;
-  sandVariance: number;
+  surfaceVariance: number;
 
   trees: {
     buffer: number;
@@ -85,6 +83,11 @@ export class TerrainManager extends THREE.Object3D {
     this.workerQueue = new WorkerQueue(workerParams);
 
     this._init();
+
+    const terrainMaps = new TerrainMaps(this.params);
+
+    displayNoiseMapImage(terrainMaps, 'humidity', 8000, 8000);
+
   }
 
   update(playerPosition: THREE.Vector3) {

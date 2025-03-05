@@ -17,28 +17,26 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    seed: "default",
+    seed: crypto.randomUUID(),
     chunkSize: CHUNK_SIZE,
     maxWorldHeight: SURFACE_HEIGHT,
     hDrawDist: 10, 
-    vDrawDist: 1,
+    vDrawDist: 0,
     terrainSampleRate: 4,
 
     fractalNoise: {
       amplitude: 1,
       frequency: 0.0007,
-      octaves: 5,
+      octaves: 6,
       lacunarity: 2.0,
       persistence: 0.5,
+      offset: 0,
     },
 
     seaLevel: 0.25 * SURFACE_HEIGHT,
     mountainHeight: 0.65 * SURFACE_HEIGHT,
     snowHeight: 0.72 * SURFACE_HEIGHT,
-    mountainVariance: 30,
-    snowVariance: 30,
-    dirtVariance: 20,
-    sandVariance: 6,
+    surfaceVariance: 30,
 
     trees: {
       trunk: {

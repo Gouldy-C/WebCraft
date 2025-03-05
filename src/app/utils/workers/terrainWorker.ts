@@ -1,11 +1,12 @@
+import * as THREE from 'three';
 import { FractalNoise } from './../classes/FractalNoise';
 import { TerrainGenParams } from "../../components/TerrainManager";
 import { WorkerPostMessage } from "../classes/WorkerQueue";
-import { coordsXYZFromKey, measureTime, RNG } from "../generalUtils";
-import * as THREE from 'three';
+import { coordsXYZFromKey, measureTime, normalizeZeroBased, RNG } from "../generalUtils";
 import { BLOCKS } from '../BlocksData';
 import * as SimplexNoise from "simplex-noise";
-import { binaryGreedyMesher, culledMesher, getTerrainXYZ, terrainHeight, terrainNoiseValue } from '../chunkGenFunctions';
+import { binaryGreedyMesher, getTerrainXYZ, noise2DBiLerp, terrainHeight } from '../chunkGenFunctions';
+import { TerrainMaps } from '../classes/TerrainMaps';
 
 export interface RequestVoxelData {
   chunkKey: string;
@@ -22,12 +23,12 @@ export interface RequestGeometryData {
 
 self.onmessage = (e: MessageEvent) => {
   if (e.data.request.type === "genChunkVoxelData") {
-    measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
-    // genVoxelData(e.data)
+    // measureTime(() => genVoxelData(e.data), `processChunk ${e.data.request.id}`);
+    genVoxelData(e.data)
   }
   if (e.data.request.type === "genChunkMeshData") {
-    measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
-    // genMeshData(e.data)
+    // measureTime(() => genMeshData(e.data), `processGeometry ${e.data.request.id}`);
+    genMeshData(e.data)
   }
 };
 
@@ -37,45 +38,51 @@ function genVoxelData(message: WorkerPostMessage) {
   const { chunkKey, params, diffs } = message.request.data as RequestVoxelData
 
   const size = params.chunkSize
-  const cCoords = coordsXYZFromKey(chunkKey);
-  const wCoords = { x: cCoords.x * size, y: cCoords.y * size, z: cCoords.z * size }
+  const chunkCoords = coordsXYZFromKey(chunkKey);
+  const chunkPos = { x: chunkCoords.x * size, y: chunkCoords.y * size, z: chunkCoords.z * size }
 
   const binaryData = new Uint32Array(size * size * 3)
   const voxelData = new Uint16Array(size * size * size)
 
-  const heightMap = new Uint16Array(size * size)
-  const dirtNoiseMap = new Uint16Array(size * size)
-  const mountainNoiseMap = new Uint16Array(size * size)
-  const snowNoiseMap = new Uint16Array(size * size)
-  const sandNoiseMap = new Uint16Array(size * size)
+  const heightArray = new Uint16Array(size * size)
+  const dirtNoiseArray = new Float32Array(size * size)
+  const mountainNoiseArray= new Float32Array(size * size)
+  const snowNoiseArray = new Float32Array(size * size)
+  const sandNoiseArray = new Float32Array(size * size)
 
+  const terrainNoise = measureTime(() => {new TerrainMaps(params)})
 
   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
-  const detailNoise = new FractalNoise(params.fractalNoise, params.seed + "detail")
 
   const dirtNoise = SimplexNoise.createNoise2D(RNG(params.seed + "dirtLayer"));
   const mountainNoise = SimplexNoise.createNoise2D(RNG(params.seed + "mountainLayer"));
   const snowNoise = SimplexNoise.createNoise2D(RNG(params.seed + "snowLayer"));
   const sandNoise = SimplexNoise.createNoise2D(RNG(params.seed + "sandLayer"));
-  const biomeNoise = SimplexNoise.createNoise2D(RNG(params.seed + "biome"));
 
   const mountainOffset = params.mountainHeight
-  const mountianChange = params.mountainVariance
+  const mountainChange = params.surfaceVariance
 
   const snowOffset = params.snowHeight
-  const snowChange = params.snowVariance
+  const snowChange = params.surfaceVariance
 
-  const sandChange = params.sandVariance
-  const dirtChange = params.dirtVariance
+  const sandChange = params.surfaceVariance * 0.3
+  const dirtChange = params.surfaceVariance * 0.70
 
   const waterLevel = params.seaLevel
   const sampleRate = params.terrainSampleRate
 
 
   // 1-6 ms pretty fast, rarely up to 20ms
-  if (wCoords.y >= -size) {
+  if (chunkPos.y >= -size) {
     for (let z = 0; z < size; z++) {
       for (let x = 0; x < size; x++) {
+        // console.log('c', terrainNoise.getContinental(cCoords.x + x, cCoords.z + z))
+        // console.log('e', terrainNoise.getErosion(cCoords.x + x, cCoords.z + z))
+        // console.log('m', terrainNoise.getMountainous(cCoords.x + x, cCoords.z + z))
+
+        // console.log('t', terrainNoise.getTemperature(cCoords.x + x, cCoords.z + z))
+        // console.log('h', terrainNoise.getHumidity(cCoords.x + x, cCoords.z + z))
+
         const sampleX = Math.floor(x / sampleRate) * sampleRate;
         const sampleZ = Math.floor(z / sampleRate) * sampleRate;
     
@@ -90,55 +97,21 @@ function genVoxelData(message: WorkerPostMessage) {
         const smoothTX = THREE.MathUtils.smootherstep(tX, 0, 1);
         const smoothTZ = THREE.MathUtils.smootherstep(tZ, 0, 1);
     
-        const heightValueA = terrainHeight({ x: sampleX, z: sampleZ }, heightMap, params, fractalNoise, wCoords);
-        const heightValueB = terrainHeight({ x: nextSampleX, z: sampleZ }, heightMap, params, fractalNoise, wCoords);
-        const heightValueC = terrainHeight({ x: sampleX, z: nextSampleZ }, heightMap, params, fractalNoise, wCoords);
-        const heightValueD = terrainHeight({ x: nextSampleX, z: nextSampleZ }, heightMap, params, fractalNoise, wCoords);
+        const heightValueA = terrainHeight({ x: sampleX, z: sampleZ }, heightArray, params, fractalNoise, chunkPos);
+        const heightValueB = terrainHeight({ x: nextSampleX, z: sampleZ }, heightArray, params, fractalNoise, chunkPos);
+        const heightValueC = terrainHeight({ x: sampleX, z: nextSampleZ }, heightArray, params, fractalNoise, chunkPos);
+        const heightValueD = terrainHeight({ x: nextSampleX, z: nextSampleZ }, heightArray, params, fractalNoise, chunkPos);
   
         const heightValueX = THREE.MathUtils.lerp(heightValueA, heightValueB, smoothTX);
         const heightValueZ = THREE.MathUtils.lerp(heightValueC, heightValueD, smoothTX);
         const heightValue = THREE.MathUtils.lerp(heightValueX, heightValueZ, smoothTZ);
-        heightMap[x + z * size] = heightValue;
-    
-        const dirtValueA = terrainNoiseValue({ x: sampleX, z: sampleZ }, dirtChange, dirtNoiseMap, params, dirtNoise, wCoords);
-        const dirtValueB = terrainNoiseValue({ x: nextSampleX, z: sampleZ }, dirtChange, dirtNoiseMap, params, dirtNoise, wCoords);
-        const dirtValueC = terrainNoiseValue({ x: sampleX, z: nextSampleZ }, dirtChange, dirtNoiseMap, params, dirtNoise, wCoords);
-        const dirtValueD = terrainNoiseValue({ x: nextSampleX, z: nextSampleZ }, dirtChange, dirtNoiseMap, params, dirtNoise, wCoords);
-  
-        const dirtValueX = THREE.MathUtils.lerp(dirtValueA, dirtValueB, smoothTX);
-        const dirtValueZ = THREE.MathUtils.lerp(dirtValueC, dirtValueD, smoothTX);
-        const dirtValue = THREE.MathUtils.lerp(dirtValueX, dirtValueZ, smoothTZ);
-        dirtNoiseMap[x + z * size] = dirtValue;
+        heightArray[x + z * size] = heightValue;
 
-        const mountValueA = terrainNoiseValue({ x: sampleX, z: sampleZ }, mountianChange, mountainNoiseMap, params, mountainNoise, wCoords);
-        const mountValueB = terrainNoiseValue({ x: nextSampleX, z: sampleZ }, mountianChange, mountainNoiseMap, params, mountainNoise, wCoords);
-        const mountValueC = terrainNoiseValue({ x: sampleX, z: nextSampleZ }, mountianChange, mountainNoiseMap, params, mountainNoise, wCoords);
-        const mountValueD = terrainNoiseValue({ x: nextSampleX, z: nextSampleZ }, mountianChange, mountainNoiseMap, params, mountainNoise, wCoords);
-  
-        const mountValueX = THREE.MathUtils.lerp(mountValueA, mountValueB, smoothTX);
-        const mountValueZ = THREE.MathUtils.lerp(mountValueC, mountValueD, smoothTX);
-        const mountValue = THREE.MathUtils.lerp(mountValueX, mountValueZ, smoothTZ);
-        mountainNoiseMap[x + z * size] = mountValue;
-
-        const snowValueA = terrainNoiseValue({ x: sampleX, z: sampleZ }, snowChange, snowNoiseMap, params, snowNoise, wCoords);
-        const snowValueB = terrainNoiseValue({ x: nextSampleX, z: sampleZ }, snowChange, snowNoiseMap, params, snowNoise, wCoords);
-        const snowValueC = terrainNoiseValue({ x: sampleX, z: nextSampleZ }, snowChange, snowNoiseMap, params, snowNoise, wCoords);
-        const snowValueD = terrainNoiseValue({ x: nextSampleX, z: nextSampleZ }, snowChange, snowNoiseMap, params, snowNoise, wCoords);
-  
-        const snowValueX = THREE.MathUtils.lerp(snowValueA, snowValueB, smoothTX);
-        const snowValueZ = THREE.MathUtils.lerp(snowValueC, snowValueD, smoothTX);
-        const snowValue = THREE.MathUtils.lerp(snowValueX, snowValueZ, smoothTZ);
-        snowNoiseMap[x + z * size] = snowValue;
-
-        const sandValueA = terrainNoiseValue({ x: sampleX, z: sampleZ }, sandChange, sandNoiseMap, params, sandNoise, wCoords);
-        const sandValueB = terrainNoiseValue({ x: nextSampleX, z: sampleZ }, sandChange, sandNoiseMap, params, sandNoise, wCoords);
-        const sandValueC = terrainNoiseValue({ x: sampleX, z: nextSampleZ }, sandChange, sandNoiseMap, params, sandNoise, wCoords);
-        const sandValueD = terrainNoiseValue({ x: nextSampleX, z: nextSampleZ }, sandChange, sandNoiseMap, params, sandNoise, wCoords);
-  
-        const sandValueX = THREE.MathUtils.lerp(sandValueA, sandValueB, smoothTX);
-        const sandValueZ = THREE.MathUtils.lerp(sandValueC, sandValueD, smoothTX);
-        const sandValue = THREE.MathUtils.lerp(sandValueX, sandValueZ, smoothTZ);
-        sandNoiseMap[x + z * size] = sandValue;
+        // noise2DBiLerp(params, heightArray, heightNoise , {x, z}, chunkPos, {x: 4000, z: 3000});
+        noise2DBiLerp(params, dirtNoiseArray, dirtNoise, {x, z}, chunkPos, {x: 200, z: 200});
+        noise2DBiLerp(params, mountainNoiseArray, mountainNoise, {x, z}, chunkPos, {x: 200, z: 200});
+        noise2DBiLerp(params, snowNoiseArray, snowNoise, {x, z}, chunkPos, {x: 200, z: 200});
+        noise2DBiLerp(params, sandNoiseArray, sandNoise, {x, z}, chunkPos, {x: 200, z: 200});
       }
     }
   }
@@ -148,19 +121,19 @@ function genVoxelData(message: WorkerPostMessage) {
 
   for (let z = 0; z < size; z++) {
     const zOffset = z * size;
-    const wz = wCoords.z + z;
+    const wz = chunkPos.z + z;
     
     for (let x = 0; x < size; x++) {
-      const wx = wCoords.x + x;
+      const wx = chunkPos.x + x;
       const mapIndex = x + zOffset;
-      let terrainHeight = heightMap[mapIndex];
-      const dirtDepth = dirtNoiseMap[mapIndex];
-      const mountainHeight = mountainNoiseMap[mapIndex];
-      const snowValue = snowNoiseMap[mapIndex];
-      const sandDepth = sandNoiseMap[mapIndex];
+      let terrainHeight = heightArray[mapIndex]
+      const dirtDepth = normalizeZeroBased(dirtNoiseArray[mapIndex], -1, 1) * dirtChange;
+      const mountainHeight = normalizeZeroBased(mountainNoiseArray[mapIndex], -1, 1) * mountainChange;
+      const snowValue = normalizeZeroBased(snowNoiseArray[mapIndex], -1, 1) * snowChange;
+      const sandDepth = normalizeZeroBased(sandNoiseArray[mapIndex], -1, 1) * sandChange;
       
       for (let y = 0; y < size; y++) {
-        const wy = wCoords.y + y;
+        const wy = chunkPos.y + y;
         const blockId = getTerrainXYZ(
           {x: wx, y: wy, z: wz},
           terrainHeight,

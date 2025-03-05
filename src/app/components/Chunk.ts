@@ -155,7 +155,7 @@ export class Chunk {
     if (!this.bufferGeometry) {
       this.bufferGeometry = new THREE.BufferGeometry();
     }
-    if (verticesData.length <= 111) return
+    // if (verticesData.length <= 110) return
     this.bufferGeometry.setAttribute('position', bufferAttribute)
     this.bufferGeometry.computeBoundingBox();
 
