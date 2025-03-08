@@ -5,7 +5,6 @@ import { WorkerObj } from '../utils/classes/WorkerQueue'
 import { coordsXYZFromKey, indexFromXYZCoords } from '../utils/generalUtils'
 
 
-
 export class Chunk {
   // Params
   id: string
@@ -26,10 +25,11 @@ export class Chunk {
   // Data
   binaryData: Uint32Array
   blockData: Uint16Array
-  mesh: THREE.Mesh | null = null
-  bufferGeometry: THREE.BufferGeometry | null = null
 
+  bufferGeometry: THREE.BufferGeometry = new THREE.BufferGeometry()
 
+  geometryId: number = -1
+  instanceId: number = -1
 
 
   constructor(terrainManager: TerrainManager, id: string) {
@@ -76,7 +76,17 @@ export class Chunk {
   }
 
   clear() {
-    this._disposeMesh()
+    this.bufferGeometry?.dispose()
+    this.bufferGeometry = new THREE.BufferGeometry()
+    if (this.instanceId !== -1){
+      this.terrainManager.batchedMesh.deleteInstance(this.instanceId)
+      this.instanceId = -1
+    }
+    if (this.geometryId !== -1){
+      this.terrainManager.batchedMesh.deleteGeometry(this.geometryId)
+      this.geometryId = -1
+      console.log(this.terrainManager.batchedMesh)
+    }
     this.binaryData = new Uint32Array(this.size * this.size * 3)
     this.blockData = new Uint16Array(this.size * this.size * this.size)
     this.chunkCoords = { x: 0, y: 0, z: 0 }
@@ -98,6 +108,8 @@ export class Chunk {
       y: this.chunkCoords.y * this.size,
       z: this.chunkCoords.z * this.size
     }
+
+
     // this.lod = params.lod
 
     this.binaryData = new Uint32Array(this.size * this.size * 3)
@@ -115,7 +127,7 @@ export class Chunk {
       if (data.voxelCount > 0)this.generateMesh();
     }
     if (type === "genChunkMeshData") {
-      this._processMeshData(data.verticesBuffer);
+      this._processMeshData(data.verticesBuffer, data.indicesBuffer, data.voxelInfoBuffer);
     }
   }
 
@@ -149,40 +161,23 @@ export class Chunk {
     this.terrainManager.workerQueue.addPriorityRequest(requestData);
   }
 
-  private _processMeshData(verticesBuffer: ArrayBuffer) {
+  private _processMeshData(verticesBuffer: ArrayBuffer, indicesBuffer: ArrayBuffer, voxelInfoBuffer: ArrayBuffer) {
     const verticesData = new Float32Array(verticesBuffer);
-    const bufferAttribute = new THREE.BufferAttribute(verticesData, 3)
-    if (!this.bufferGeometry) {
-      this.bufferGeometry = new THREE.BufferGeometry();
-    }
-    // if (verticesData.length <= 110) return
-    this.bufferGeometry.setAttribute('position', bufferAttribute)
-    this.bufferGeometry.computeBoundingBox();
+    const indicesData = new Uint32Array(indicesBuffer);
+    const voxelInfoData = new Uint32Array(voxelInfoBuffer);
 
-    if (!this.mesh) {
-      this.mesh = new THREE.Mesh(this.bufferGeometry, this.terrainManager.shaderMaterial)
-      this.terrainManager.add(this.mesh)
-    }
+    const verticesBA = new THREE.BufferAttribute(verticesData, 3)
+    const voxelInfoBA = new THREE.BufferAttribute(voxelInfoData, 2)
 
-    this.mesh.position.set(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
-    this.mesh.geometry.setAttribute('position', bufferAttribute)
-    this.mesh.geometry.computeBoundingSphere()
-    this.mesh.geometry.computeBoundingBox()
-  }
-
-
-  private _disposeMesh() {
-    if (!this.mesh) return
-    this.terrainManager.remove(this.mesh);
-    this.mesh.geometry.dispose();
-    this.bufferGeometry?.dispose();
-    if (Array.isArray(this.mesh.material)) {
-      this.mesh.material.forEach((material) => {
-        material.dispose();
-      });
-    } else {
-      this.mesh.material.dispose();
-    }
-    this.mesh = null
+    this.bufferGeometry.setAttribute('position', verticesBA)
+    this.bufferGeometry.setAttribute('voxel', voxelInfoBA)
+    this.bufferGeometry.setIndex(new THREE.Uint32BufferAttribute(indicesData, 1))
+    this.bufferGeometry.translate(this.worldPosition.x, this.worldPosition.y, this.worldPosition.z)
+    
+    if (verticesData.length <= 111) return
+    this.geometryId = this.terrainManager.batchedMesh.addGeometry(this.bufferGeometry)
+    this.instanceId = this.terrainManager.batchedMesh.addInstance(this.geometryId)
+    this.terrainManager.batchedMesh.computeBoundingBox()
+    this.terrainManager.batchedMesh.computeBoundingSphere()
   }
 }

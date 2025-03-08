@@ -5,7 +5,7 @@ import Stats from "three/examples/jsm/libs/stats.module.js";
 import { World } from "../components/World";
 
 export class MainScene extends THREE.Scene {
-  fogBoolean = false;
+  fogBoolean = true;
 
   renderer: THREE.WebGLRenderer;
   stats: Stats;
@@ -39,7 +39,7 @@ export class MainScene extends THREE.Scene {
       const { chunkSize, hDrawDist } = this.world.params.terrain;
       this.fog = new THREE.Fog(
         "#c4e2ff",
-        chunkSize * (hDrawDist / 2),
+        chunkSize * hDrawDist,
         chunkSize * (hDrawDist / 2 + 2)
       );
     }
@@ -54,13 +54,13 @@ export class MainScene extends THREE.Scene {
   private animate() {
     let currentTime = performance.now();
     let deltaTime = (currentTime - this.previousTime) / 1000;
+    this.previousTime = currentTime;
     
     this.world.update(deltaTime);
     this.renderer.render(this, this.world.activeCamera);
     this.stats.update();
     
-    this.previousTime = currentTime;
-    console.log(Math.round(this.renderer.info.render.triangles), this.renderer.info.render.calls);
+    // console.log(Math.round(this.renderer.info.render.triangles), this.renderer.info.render.calls);
   }
 
   private addEventListeners() {

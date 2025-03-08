@@ -11,13 +11,16 @@
   "devDependencies": {
     "@types/three": "^0.168.0",
     "typescript": "^5.5.3",
-    "vite-plugin-glsl": "^1.3.1"
+    "vite-plugin-glsl": "^1.3.1",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1"
   },
   "dependencies": {
+    "@dimforge/rapier3d": "^0.15.0",
     "alea": "^1.0.1",
     "fast-simplex-noise": "^4.0.0",
     "simplex-noise": "^4.0.3",
-    "three": "^0.170.0",
+    "three": "^0.174.0",
     "vite": "^5.4.11"
   }
 }

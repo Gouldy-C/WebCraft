@@ -3,8 +3,8 @@ import { InputManager, InputAction } from "../../utils/classes/InputManger";
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { World } from "../World";
-import { TerrainChunk } from "./TerrainChunk";
-import { Physics } from "./Physics";
+import { Physics } from "./MyPhysics";
+import { Chunk } from "../Chunk";
 
 export class Player extends THREE.Object3D {
   // Cached objects for reuse
@@ -80,14 +80,13 @@ export class Player extends THREE.Object3D {
       80,
       window.innerWidth / window.innerHeight,
       0.1,
-      this.world.params.terrain.chunkSize.width *
-        this.world.params.terrain.drawDistance
+      this.world.params.terrain.chunkSize * this.world.params.terrain.hDrawDist
     );
     this.world.add(this.camera);
     this.camera.position.set(
-      this.world.params.terrain.chunkSize.width / 2,
+      this.world.params.terrain.chunkSize / 2,
       150,
-      this.world.params.terrain.chunkSize.width / 2
+      this.world.params.terrain.chunkSize / 2
     );
 
     this.controls = new PointerLockControls(this.camera, document.body);
@@ -212,48 +211,48 @@ export class Player extends THREE.Object3D {
     this.boundMesh.position.y -= this.height * 0.4;
   }
 
-  private updateRaycaster() {
-    const now = performance.now();
-    if (now - this.lastRaycastTime < this.raycastInterval) return;
-    this.lastRaycastTime = now;
+  // private updateRaycaster() {
+  //   const now = performance.now();
+  //   if (now - this.lastRaycastTime < this.raycastInterval) return;
+  //   this.lastRaycastTime = now;
 
-    this.raycaster.setFromCamera(this.CENTER_SCREEN, this.camera);
-    const chunks = this.world.terrain.getIntractableChunks(
-      this.position.x,
-      this.position.y,
-      this.position.z
-    );
+  //   this.raycaster.setFromCamera(this.CENTER_SCREEN, this.camera);
+  //   const chunks = this.world.terrain.getIntractableChunks(
+  //     this.position.x,
+  //     this.position.y,
+  //     this.position.z
+  //   );
 
-    if (chunks.length === 0) {
-      this.clearSelection();
-      return;
-    }
+  //   if (chunks.length === 0) {
+  //     this.clearSelection();
+  //     return;
+  //   }
 
-    const intersects = this.raycaster.intersectObjects(chunks, true);
-    this.handleIntersection(intersects[0]);
-  }
+  //   const intersects = this.raycaster.intersectObjects(chunks, true);
+  //   this.handleIntersection(intersects[0]);
+  // }
 
   private clearSelection() {
     this.selectedCoords = null;
     this.selectionHelper.visible = false;
   }
 
-  private handleIntersection(intersect: THREE.Intersection | undefined) {
-    if (!intersect) {
-      this.clearSelection();
-      return;
-    }
+  // private handleIntersection(intersect: THREE.Intersection | undefined) {
+  //   if (!intersect) {
+  //     this.clearSelection();
+  //     return;
+  //   }
 
-    const chunk = intersect.object.parent as TerrainChunk;
-    const mesh = intersect.object as THREE.InstancedMesh;
+  //   const chunk = intersect.object.parent as Chunk;
+  //   const mesh = intersect.object as THREE.InstancedMesh;
 
-    if (!this.isValidIntersection(intersect)) {
-      this.clearSelection();
-      return;
-    }
+  //   if (!this.isValidIntersection(intersect)) {
+  //     this.clearSelection();
+  //     return;
+  //   }
 
-    this.updateSelectionPosition(intersect, chunk, mesh);
-  }
+  //   this.updateSelectionPosition(intersect, chunk, mesh);
+  // }
 
   private isValidIntersection(intersect: THREE.Intersection): boolean {
     if (intersect.instanceId === undefined) {
@@ -273,7 +272,7 @@ export class Player extends THREE.Object3D {
 
   private updateSelectionPosition(
     intersect: THREE.Intersection,
-    chunk: TerrainChunk,
+    chunk: Chunk,
     mesh: THREE.InstancedMesh
   ) {
     this.intersect = intersect;
@@ -281,7 +280,7 @@ export class Player extends THREE.Object3D {
     mesh.getMatrixAt(intersect.instanceId!, this.tempMatrix);
 
     this.tempVector.setFromMatrixPosition(this.tempMatrix);
-    this.tempVector.add(chunk.position);
+    this.tempVector.add(chunk.worldPosition);
 
     this.selectedCoords = this.tempVector.clone();
 

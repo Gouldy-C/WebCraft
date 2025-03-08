@@ -15,6 +15,7 @@ import { F_SHADER, V_SHADER } from "../utils/shaders";
 import { TextureArrayBuilder } from "../utils/classes/TextureArrayBuilder";
 import { BLOCKS } from "../utils/BlocksData";
 import { displayNoiseMapImage, TerrainMaps } from "../utils/classes/TerrainMaps";
+import { getQuadPoints, packVertices } from "../utils/chunkGenFunctions";
 
 export interface TerrainGenParams {
   seed: string;
@@ -62,6 +63,8 @@ export class TerrainManager extends THREE.Object3D {
   shaderMaterial: THREE.ShaderMaterial;
   textureArrayBuilder: TextureArrayBuilder;
 
+  batchedMesh: THREE.BatchedMesh;
+
   workerQueue: WorkerQueue<WorkerObj>;
 
   constructor(world: World) {
@@ -84,9 +87,48 @@ export class TerrainManager extends THREE.Object3D {
 
     this._init();
 
-    const terrainMaps = new TerrainMaps(this.params);
+    this.batchedMesh = new THREE.BatchedMesh(20000, 7000000, 10000000, this.shaderMaterial);
+    this.add(this.batchedMesh);
 
-    displayNoiseMapImage(terrainMaps, 'humidity', 8000, 8000);
+
+    // const terrainMaps = new TerrainMaps(this.params);
+    // displayNoiseMapImage(terrainMaps, 'humidity', 8000, 8000);
+
+    // const xp = getQuadPoints(0,4,0,0,5,5)
+    // console.log('xp', ...xp)
+    // const xn = getQuadPoints(1,0,0,0,5,5)
+    // console.log('xn', ...xn)
+    // const yp = getQuadPoints(2,0,4,0,5,5)
+    // console.log('yp', ...yp)
+    // const yn = getQuadPoints(3,0,0,0,5,5)
+    // console.log('yn', ...yn)
+    // const zp = getQuadPoints(4,0,0,4,5,5)
+    // console.log('zp', ...zp)
+    // const zn = getQuadPoints(5,0,0,0,5,5)
+    // console.log('zn', ...zn)
+
+    // const points = [xp, xn, yp, yn, zp, zn]
+    // const vertices = []
+    // const indices = []
+    // const voxelData = []
+
+    // for (let i = 0; i < 6; i++) {
+    //   const {verts, inds, voxel} = packVertices(points[i], 2, i, 5, 5, vertices.length)
+    //   console.log('verts', ...verts)
+    //   console.log('inds', ...inds)
+
+
+    //   vertices.push(...verts)
+    //   indices.push(...inds)
+    //   voxelData.push(...voxel)
+    // }
+    // const bufferGeometry = new THREE.BufferGeometry()
+    // bufferGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+    // bufferGeometry.setAttribute('voxel', new THREE.Uint32BufferAttribute(voxelData, 2))
+    // bufferGeometry.setIndex(indices)
+    // const testMesh = new THREE.Mesh(bufferGeometry, this.shaderMaterial)
+    // testMesh.position.set(0, 0, 0);
+    // this.add(testMesh)
 
   }
 

@@ -50,7 +50,7 @@ function genVoxelData(message: WorkerPostMessage) {
   const snowNoiseArray = new Float32Array(size * size)
   const sandNoiseArray = new Float32Array(size * size)
 
-  const terrainNoise = measureTime(() => {new TerrainMaps(params)})
+  // const terrainNoise = measureTime(() => {new TerrainMaps(params)})
 
   const fractalNoise = new FractalNoise(params.fractalNoise, params.seed);
 
@@ -198,10 +198,11 @@ function genMeshData(message: WorkerPostMessage) {
   const voxelData = new Uint16Array(voxelDataBuffer)
   const binaryData = new Uint32Array(binaryDataBuffer)
 
-  let vertices = binaryGreedyMesher(voxelData, binaryData, size)
-  // let vertices = culledMesher(voxelData, binaryData, size)
+  let {vertices, indices, voxelInfo} = binaryGreedyMesher(voxelData, binaryData, size)
 
   const verticesBuffer = new Float32Array(vertices).buffer
+  const indicesBuffer = new Uint32Array(indices).buffer
+  const voxelInfoBuffer = new Uint32Array(voxelInfo).buffer
 
   const returnData: WorkerPostMessage = {
     id: message.id,
@@ -212,10 +213,12 @@ function genMeshData(message: WorkerPostMessage) {
       data: {
         chunkKey,
         verticesBuffer,
+        indicesBuffer,
+        voxelInfoBuffer,
       },
-      buffers: [verticesBuffer]
+      buffers: [verticesBuffer, indicesBuffer, voxelInfoBuffer]
     },
   };
 
-  self.postMessage(returnData, [verticesBuffer]);
+  self.postMessage(returnData, [verticesBuffer, indicesBuffer, voxelInfoBuffer]);
 }

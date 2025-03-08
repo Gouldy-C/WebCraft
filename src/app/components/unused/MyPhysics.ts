@@ -1,7 +1,6 @@
-import { Block } from './../utils/BlocksData';
 import * as THREE from "three";
-import { BLOCKS } from "../utils/BlocksData"
-import { World } from "./World";
+import { BLOCKS } from "../../utils/BlocksData";
+import { World } from "../World";
 import { Player } from "./Player";
 
 export interface PhysicsObject extends Player {
@@ -38,12 +37,12 @@ export class Physics {
   object: PhysicsObject;
   gravity: number = 30;
   helpers: THREE.Group;
-  
+
   private readonly GROUND_ANGLE_THRESHOLD = 2.8; // About 160 degrees - very strict!
   private readonly DEBUG_COLLISION = false; // Set to true to see collision angles
 
   constructor(object: PhysicsObject) {
-    this.object = object
+    this.object = object;
     this.helpers = new THREE.Group();
     this.object.world.add(this.helpers);
   }
@@ -93,7 +92,7 @@ export class Physics {
       for (let y = extents.y.min; y <= extents.y.max; y++) {
         for (let z = extents.z.min; z <= extents.z.max; z++) {
           const block = this.object.world.getVoxel(x, y, z);
-          if (block && block.id !== BLOCKS.air.id) {
+          if (block !== BLOCKS.air.id) {
             const blockPosition = { x, y, z };
             candidates.push(blockPosition);
             this.addCollisionHelper(blockPosition);
@@ -141,7 +140,9 @@ export class Physics {
           console.log(`Collision angle: ${angleInDegrees.toFixed(2)}°`);
         }
 
-        const isVerticalCollision = Math.abs(dy) > Math.abs(dx) * 1.5 && Math.abs(dy) > Math.abs(dz) * 1.5; // Made more strict
+        const isVerticalCollision =
+          Math.abs(dy) > Math.abs(dx) * 1.5 &&
+          Math.abs(dy) > Math.abs(dz) * 1.5; // Made more strict
         const isTopCollision = dy < 0 && isVerticalCollision;
         const centerDistance = Math.sqrt(dx * dx + dz * dz);
         const isCentered = centerDistance < this.object.radius * 0.8; // Made more strict
@@ -150,15 +151,20 @@ export class Physics {
           normal = new THREE.Vector3(0, -Math.sign(dy), 0);
           overlap = overlapY;
 
-          if (isTopCollision && 
-              block.y + 0.5 > highestGroundY && 
-              angle > this.GROUND_ANGLE_THRESHOLD && // Stricter angle check
-              isCentered) {
+          if (
+            isTopCollision &&
+            block.y + 0.5 > highestGroundY &&
+            angle > this.GROUND_ANGLE_THRESHOLD && // Stricter angle check
+            isCentered
+          ) {
             highestGroundY = block.y + 0.5;
-            const distanceToGround = Math.abs(p.y - this.object.height - highestGroundY);
-            if (distanceToGround < 0.1) { // Very close to the surface
+            const distanceToGround = Math.abs(
+              p.y - this.object.height - highestGroundY
+            );
+            if (distanceToGround < 0.1) {
+              // Very close to the surface
               if (this.DEBUG_COLLISION) {
-                console.log('Valid ground collision detected');
+                console.log("Valid ground collision detected");
                 console.log(`Distance to ground: ${distanceToGround}`);
                 console.log(`Center distance: ${centerDistance}`);
               }
@@ -183,13 +189,13 @@ export class Physics {
 
     this.object.onGround = validGroundCollision;
     this.object.lastGroundY = highestGroundY;
-    
+
     return collisions;
   }
 
   resolveCollision(collisions: collision[]) {
     collisions.sort((a, b) => b.overlap - a.overlap);
-    
+
     for (const collision of collisions) {
       if (!this.pointInPlayerBounds(collision.contactPoint)) {
         continue;
@@ -214,7 +220,8 @@ export class Physics {
     const r_sq = dx * dx + dz * dz;
 
     return (
-      Math.abs(dy) < this.object.height / 2 && r_sq < this.object.radius * this.object.radius
+      Math.abs(dy) < this.object.height / 2 &&
+      r_sq < this.object.radius * this.object.radius
     );
   }
 

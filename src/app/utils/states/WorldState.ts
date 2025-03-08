@@ -17,10 +17,10 @@ export const defaultWorldStore: WorldStore = {
   objects: {},
   players: {},
   terrain: {
-    seed: crypto.randomUUID(),
+    seed: 'default',
     chunkSize: CHUNK_SIZE,
     maxWorldHeight: SURFACE_HEIGHT,
-    hDrawDist: 10, 
+    hDrawDist: 15, 
     vDrawDist: 0,
     terrainSampleRate: 4,
 

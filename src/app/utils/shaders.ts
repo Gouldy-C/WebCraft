@@ -3,6 +3,7 @@ precision highp float;
 precision highp sampler2D;
 precision highp int;
 
+attribute uvec2 voxel;
 uniform sampler2D uTextureConfig; // X: numTextures , Y: startIndex in the texture array
 
 out vec3 vertexNormal;
@@ -71,15 +72,15 @@ float getTextureIndex(float blockId, vec3 normal) {
 }
 
 void main() {
-  float x = float(uint(position.x) & 0x3Fu);
-  float y = float(uint(position.x) >> 6u & 0x3Fu);
-  float z = float(uint(position.x) >> 12u & 0x3Fu);
-  uint normalIndex = uint(position.x) >> 18u & 0x7u;
-  uint UVIndex = uint(position.x) >> 21u & 0x3u;
+  float x = position.x;
+  float y = position.y;
+  float z = position.z;
 
-  float blockId = float(uint(position.y) & 0xFFFu);
-  float width = float(uint(position.y) >> 12u & 0x1Fu);
-  float height = float(uint(position.y) >> 17u & 0x1Fu);
+  float blockId = float(uint(voxel.x) & 0xFFFu);
+  float width = float((uint(voxel.x) >> 12u) & 0x1Fu);
+  float height = float((uint(voxel.x) >> 17u) & 0x1Fu);
+  uint normalIndex = (uint(voxel.x) >> 22u) & 0x7u;
+  uint UVIndex = (uint(voxel.x) >> 25u) & 0x3u;
   
   vertexNormal = decodeNormal(normalIndex);
   vertexUV = decodeUVCoords(UVIndex);
@@ -87,8 +88,7 @@ void main() {
   quadWidth = width;
   quadHeight = height;
 
-  vec3 pos = vec3(x, y, z);
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( pos, 1.0 );
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( x, y, z, 1.0 );
 }
 `;
 
